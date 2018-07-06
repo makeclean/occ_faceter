@@ -17,7 +17,7 @@ CXXFLAGS = -g -std=c++11 $(INC)
 
 .PHONY: default all clean
 
-default:  occ_faceter dagmc_slicer
+default:  dagmc_faceter dagmc_slicer dagmc_merge
 all: default
 
 HEADERS = MBTool.hpp
@@ -25,11 +25,17 @@ HEADERS = MBTool.hpp
 mbtool.o: MBTool.cpp $(HEADERS)
 	$(CXX) $(CXXFLAGS) -c MBTool.cpp -o mbtool.o
 
-occ_faceter.o: main.cc mbtool.o $(HEADERS)
-	$(CXX) $(CXXFLAGS) -c main.cc -o main.o
+dagmc_faceter.o: dagmc_faceter.cc mbtool.o $(HEADERS)
+	$(CXX) $(CXXFLAGS) -c dagmc_faceter.cc -o dagmc_faceter.o
 
-occ_faceter: mbtool.o main.o
-	$(CXX) $(CXXFLAGS) main.o mbtool.o $(OCC_LIBS) $(MOAB_LIBS) -o occ_faceter
+dagmc_faceter: mbtool.o dagmc_faceter.o
+	$(CXX) $(CXXFLAGS) dagmc_faceter.o mbtool.o $(OCC_LIBS) $(MOAB_LIBS) -o dagmc_faceter
+
+dagmc_topology.o: dagmc_topology.cc
+	$(CXX) $(CXXFLAGS) -c dagmc_topology.cc -o dagmc_topology.o
+
+dagmc_merge: dagmc_topology.o
+	$(CXX) $(CXXFLAGS) dagmc_topology.o dagmc_merge.cc $(MOAB_LIBS) -o dagmc_merge
 
 dagmc_slicer.o: dagmc_slicer.cc $(HEADERS)
 	$(CXX) $(CXXFLAGS) -c dagmc_slicer.cc -o dagmc_slicer.o
@@ -38,6 +44,6 @@ dagmc_slicer: dagmc_slicer.o $(HEADERS)
 	$(CXX) $(CXXFLAGS) dagmc_slicer.o $(CGAL_LIBS) $(MOAB_LIBS) -o dagmc_slicer
 
 clean:
-	-rm -f main.o mbtool.o
+	-rm -f dagmc_faceter.o mbtool.o
 	-rm -f dagmc_slicer.o 
-	-rm -f occ_faceter dagmc_slicer
+	-rm -f dagmc_faceter dagmc_slicer

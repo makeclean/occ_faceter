@@ -268,7 +268,7 @@ edge_data make_edge_facets(TopoDS_Face currentFace, TopoDS_Edge currentEdge, Fac
     const TColStd_Array1OfInteger &lines = edges->Nodes();
     std::cout << "Edge has " << lines.Length() << " length" <<  std::endl;
     for (int i = lines.Lower() ; i <= lines.Upper() ; i++) {
-	conn.push_back(i);
+      conn.push_back(lines(i));
     }
     edges_for_moab.connectivity = conn;
     return edges_for_moab;

@@ -1,5 +1,6 @@
 #include <map>
 #include "moab/Core.hpp"
+#include "moab/GeomTopoTool.hpp"
 
 typedef std::pair<moab::EntityHandle,moab::EntityHandle> merge_pairs_t;
 
@@ -32,7 +33,7 @@ class DAGMCTopology {
     moab::ErrorCode identify_coincident(std::vector<merge_pairs_t> &coincident);
 
     // merge coincident surfaces
-    moab::ErrorCode merge_coincident(const std::vector<merge_pairs_t> coincident,
+    moab::ErrorCode merge_coincident_curves(const std::vector<merge_pairs_t> coincident,
 				     const bool del = true);
 
     moab::ErrorCode compare_edges(moab::Range edges1, moab::Range edges2, bool &same);
@@ -48,6 +49,26 @@ class DAGMCTopology {
     // remove the duplciate  
     moab::ErrorCode remove_duplicate_curves(const std::vector<merge_pairs_t> &coincident,
 					    std::vector<merge_pairs_t> &reduced_list);
+
+    // return the vector of all matching surfaces
+    moab::ErrorCode identify_coincident_surfaces(std::vector<merge_pairs_t> &coincident_surfaces);
+
+    // given a surface compare it with all surfaces in the problem and if it matches
+    // add it to the pairs vector
+    moab::ErrorCode compare_surface_curves(const moab::EntityHandle surface,
+					   const moab::Range surface_set,
+					   std::vector<merge_pairs_t> &surface_pairs);
+  
+     // given two surface handles, compare their child curves, if the same set true 
+     moab::ErrorCode compare_surfaces(const moab::EntityHandle surface1,
+				      const moab::EntityHandle surface2,
+				      bool &same);
+
+    // merge duplicate surfaces;
+    moab::ErrorCode merge_duplicate_surfaces(const std::vector<merge_pairs_t> duplicates,
+					     const bool remove);
+					     
+  
   private:
     moab::Core *mbi; // moab pointer
     bool own_moab; // does the class own its own moab instance?

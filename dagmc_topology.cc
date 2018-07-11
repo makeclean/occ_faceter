@@ -64,8 +64,16 @@ moab::ErrorCode DAGMCTopology::perform_merge() {
   // i.e. curve1 === curve2 ; curve1 === curve3 ; curve1 === curve4
   std::vector<merge_pairs_t> reduced_list;
   rval = remove_duplicate_curves(coincident,reduced_list);
+  // now merge the curves together
+  rval = merge_coincident_curves(reduced_list,true);
+
+  // determine surfaces that are coinicident
+  std::vector<merge_pairs_t> coincident_surfaces;
+  rval = identify_coincident_surfaces(coincident_surfaces);
+
+  rval = merge_duplicate_surfaces(coincident_surfaces,true);
   
-  return merge_coincident(reduced_list,true);
+  return rval;
 }
 
 // loop through the vector and remove duplicates, and identify 
@@ -254,7 +262,7 @@ moab::ErrorCode DAGMCTopology::find_curve_pairs(const std::map<int,moab::Range> 
 }
 
 // merge surfaces that have been identified as being identical remove one of them
-moab::ErrorCode DAGMCTopology::merge_coincident(const std::vector<merge_pairs_t> coincident, const bool del) {
+moab::ErrorCode DAGMCTopology::merge_coincident_curves(const std::vector<merge_pairs_t> coincident, const bool del) {
   // the coincident list defines curves which have been idendtified to be identical
   // in terms of connectivity. procede through the list and create new links for the curves
   // and if selected delete the old links
@@ -272,23 +280,20 @@ moab::ErrorCode DAGMCTopology::merge_coincident(const std::vector<merge_pairs_t>
     rval = mbi->get_parent_meshsets(curves.first, parents1);
     rval = mbi->get_parent_meshsets(curves.second,parents2);
 
-    // get the id
-    //int id1[1],id2[1];
-    //rval = mbi->tag_get_data(id_tag,&(curves.first),1,id1);
-    //rval = mbi->tag_get_data(id_tag,&(curves.second),1,id2);
-
-    /*
-    std::cout << id1[0] << " " << id2[0] << std::endl;
-    std::cout << curves.first << " " << curves.second << std::endl;
-    std::cout << parents1[0] << " " << parents2[0] << std::endl;
-    */
+    // tag the edges with the curve id of its parent
+    int id1[1];
+    rval = mbi->tag_get_data(id_tag,&(curves.first),1,id1);
+    moab::Range edges;
+    rval = mbi->get_entities_by_type(curves.first,moab::MBEDGE,edges);
+    rval = mbi->tag_set_data(id_tag,edges,id1);
     
     // curves can have several parents, at points where 4 surfaces meet
     // for example - add pc relationship between parents2[0] and the master curve
     rval = mbi->add_parent_child(parents2[0],curves.first);
-    rval = mbi->add_parent_child(parents1[0],curves.second);
-    rval = mbi->add_parent_child(curves.first,curves.second);
+    // rval = mbi->add_parent_child(parents1[0],curves.second);
+   
     // delete the second curve
+ 
     if ( del ) {
       rval = mbi->delete_entities(&(curves.second),1);
     }
@@ -298,6 +303,105 @@ moab::ErrorCode DAGMCTopology::merge_coincident(const std::vector<merge_pairs_t>
   }
   
   return moab::MB_SUCCESS;
+}
+
+moab::ErrorCode DAGMCTopology::compare_surfaces(const moab::EntityHandle surface1,
+						const moab::EntityHandle surface2,
+						bool &same) {
+  moab::ErrorCode rval = moab::MB_FAILURE;
+  moab::Range child_curves1,child_curves2; // range containing children of s1 and s2 respectively
+  rval = mbi->get_child_meshsets(surface1,child_curves1);
+  rval = mbi->get_child_meshsets(surface2,child_curves2);
+  // combining two sets of ranges, and comparing the size of the merged range
+  // with the 2nd child when the same size means curve1 & curve2 identcal
+  moab::Range combined = child_curves1;
+  combined.merge(child_curves2);
+  if ( combined.size() == child_curves2.size() ) {
+    same = true;
+  }
+  return rval;
+}
+
+// compare the surface provided with all surfaces in the problem, if a match is found
+// add it to the list 
+moab::ErrorCode DAGMCTopology::compare_surface_curves(const moab::EntityHandle surface,
+						      const moab::Range surface_set,
+						      std::vector<merge_pairs_t> &surface_pairs) {
+  
+  moab::ErrorCode rval = moab::MB_FAILURE;
+  for ( moab::EntityHandle comparison_surface : surface_set ) {
+    if ( comparison_surface == surface ) break;
+    bool same = false;
+    rval = compare_surfaces(surface,comparison_surface,same);
+    if ( same ) {
+      std::pair<moab::EntityHandle,moab::EntityHandle> pair(std::min(surface,comparison_surface),
+							    std::max(surface,comparison_surface));
+      surface_pairs.push_back(pair);
+    }
+  }
+  return rval;
+}
+
+//
+moab::ErrorCode DAGMCTopology::identify_coincident_surfaces(std::vector<merge_pairs_t> &coincident_surfaces) {
+  // get the list of surface entity sets and compare the child curves of pairs of surfaces
+  // if any two surfaces share an identical set of curves, then they must be identical surfaces
+
+  moab::Range surface_set;
+  moab::ErrorCode rval = moab::MB_FAILURE;
+  const int dim = 2;
+  const void *tag_value[] = {&dim};
+  rval = mbi->get_entities_by_type_and_tag(0,moab::MBENTITYSET,&geometry_dimension_tag,
+					   tag_value,1,surface_set);
+  // loop over the surfaces
+  //std::vector<merge_pairs_t> matching_surfaces;
+  for ( moab::EntityHandle surface : surface_set ) {
+    rval = compare_surface_curves(surface,surface_set,coincident_surfaces);
+  }
+}
+
+// with the list of identical surfaces, remove one and set the appropriate
+// topological sense data
+moab::ErrorCode DAGMCTopology::merge_duplicate_surfaces(const std::vector<merge_pairs_t> duplicates,
+							const bool remove) {
+  moab::ErrorCode rval = moab::MB_FAILURE;
+
+  // new topology tool
+  moab::GeomTopoTool *gtt = new moab::GeomTopoTool(mbi,false,input_set);
+  
+  for ( merge_pairs_t surfaces : duplicates ) {
+    moab::EntityHandle surface_keep = surfaces.first;
+    moab::EntityHandle surface_delete = surfaces.second;
+
+    // set the parent of surface_delete to also be the parent of
+    // surface_keep
+    moab::Range parent_vols;
+    // just like highlander - there can only be one
+    // assert(parent_vols.size() == 1);
+    rval = mbi->get_parent_meshsets(surface_delete,parent_vols);
+    moab::EntityHandle reverse_vol = parent_vols[0];
+
+    parent_vols.clear();
+    // assert(parent_vols.size() == 1);
+    rval = mbi->get_parent_meshsets(surface_keep,parent_vols);
+    moab::EntityHandle forward_vol = parent_vols[0];
+    
+    rval = mbi->add_parent_child(reverse_vol,surface_keep);
+
+    // set the surface sense wrt to each volume
+    rval = gtt->set_sense(surface_keep,forward_vol,1);
+    rval = gtt->set_sense(surface_keep,reverse_vol,-1);
+    
+    if ( remove ) {
+      // remove the opposing surface
+      rval = mbi->delete_entities(&(surface_delete),1);
+    }
+    
+  }
+
+  delete gtt;
+  std::cout << "Done merging..." << std::endl;
+  return rval;
 }
 
 moab::ErrorCode DAGMCTopology::save_file(const std::string filename) {

@@ -44,6 +44,5 @@ dagmc_slicer: dagmc_slicer.o $(HEADERS)
 	$(CXX) $(CXXFLAGS) dagmc_slicer.o $(CGAL_LIBS) $(MOAB_LIBS) -o dagmc_slicer
 
 clean:
-	-rm -f dagmc_faceter.o mbtool.o
-	-rm -f dagmc_slicer.o 
-	-rm -f dagmc_faceter dagmc_slicer
+	-rm -f *.o
+	-rm -f dagmc_faceter dagmc_slicer dagmc_merge

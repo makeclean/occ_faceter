@@ -323,14 +323,15 @@ void facet_all_volumes(Handle_TopTools_HSequenceOfShape shape_list){
 STEPControl_Reader *step;
 int main (int argc, char* argv[]) {
 
-  std::string ftol(argv[1]);
+  std::string cad_file(argv[1]);
+  std::string ftol(argv[2]);
   facet_tol = std::stod(ftol);
-  std::string filename(argv[2]);
+  std::string filename(argv[3]);
 
   moab::ErrorCode rval = mbtool->set_tags();
   
   step = new STEPControl_Reader();
-  step->ReadFile("test.stp");
+  step->ReadFile(cad_file.c_str());
   step->PrintCheckLoad(false,IFSelect_GeneralInfo);
   int count = step->NbRootsForTransfer();
   TopoDS_Shape shape;

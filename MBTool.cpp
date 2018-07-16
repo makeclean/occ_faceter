@@ -44,6 +44,9 @@ moab::ErrorCode MBTool::set_tags() {
 // make a new volume meshset 
 moab::ErrorCode MBTool::make_new_volume(moab::EntityHandle &volume) {
   volID++;
+
+  std::cout << "Created new volume " << volID << std::endl;
+  
   // make a new volume set
   moab::ErrorCode rval = mbi->create_meshset(moab::MESHSET_SET,volume);
   // set the id tag
@@ -81,6 +84,8 @@ moab::ErrorCode MBTool::add_surface(moab::EntityHandle volume,
 moab::ErrorCode MBTool::make_new_surface(moab::EntityHandle &surface) {
   surfID++;
   //  moab::EntityHandle surface;
+  std::cout << "Created new surface " << surfID << std::endl;
+  
   moab::ErrorCode rval = mbi->create_meshset(moab::MESHSET_SET, surface);
   // set the id tag
   rval = mbi->tag_set_data(id_tag,&surface,1,&surfID);
@@ -219,12 +224,10 @@ moab::ErrorCode MBTool::add_facets_and_curves_to_surface(moab::EntityHandle surf
      for ( int j = 0 ; j < end_point ; j++ ) {
        moab::EntityHandle h;
        moab::EntityHandle connection[2];
-       std::cout << edge_collection[i].connectivity.size() << std::endl;
+
        connection[0] = vertex_map[edge_collection[i].connectivity[j]];
        connection[1] = vertex_map[edge_collection[i].connectivity[j+1]];
 
-       std::cout << curve << " " << connection[0] << " " << connection[1] << std::endl; 
-       
        rval = mbi->add_parent_child(curve,connection[0]);
        rval = mbi->add_parent_child(curve,connection[1]);
        // create the edge type

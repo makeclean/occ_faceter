@@ -26,6 +26,11 @@
 
 #include "BRepOffsetAPI_Sewing.hxx"
 
+#include "XSControl_WorkSession.hxx"
+#include "Interface_InterfaceModel.hxx"
+#include "StepRepr_Representation.hxx"
+#include "TCollection_HAsciiString.hxx"
+
 #include "MBTool.hpp"
 
 MBTool *mbtool = new MBTool();
@@ -179,7 +184,7 @@ void get_edges(TopoDS_Shape shape) {
   for ( int i = 1 ; i<=edges.Extent() ; i++ ) {
     TopoDS_Edge currentEdge = TopoDS::Edge(edges(i));
     //    facet_data facets = get_facets(currentEdge);
-    std::cout << i << std::endl;    
+    //   std::cout << i << std::endl;    
   }
   //for ( TopExp_Explorer ex(shape, TopAbs_EDGE) ; ex.More() ; ex.Next() ) {
   //  TopoDS_Edge currentEdge = TopoDS::Edge(ex.Current());
@@ -266,7 +271,7 @@ edge_data make_edge_facets(TopoDS_Face currentFace, TopoDS_Edge currentEdge, Fac
     std::vector<int> conn;
     //TColStd_Array1OfInteger
     const TColStd_Array1OfInteger &lines = edges->Nodes();
-    std::cout << "Edge has " << lines.Length() << " length" <<  std::endl;
+    //std::cout << "Edge has " << lines.Length() << " length" <<  std::endl;
     for (int i = lines.Lower() ; i <= lines.Upper() ; i++) {
       conn.push_back(lines(i));
     }
@@ -284,7 +289,6 @@ void get_facets_for_shape(TopoDS_Shape shape) {
   for( TopExp_Explorer ex(shape, TopAbs_FACE); ex.More(); ex.Next() ) {
     TopoDS_Face currentFace = TopoDS::Face( ex.Current());
     //facet_data facets = get_facets(currentFace);
-
     // get the triangulation for the current face
     FaceterData data = get_triangulation(currentFace);
     // make facets for current face
@@ -300,7 +304,7 @@ void get_facets_for_shape(TopoDS_Shape shape) {
       edge_collection.push_back(edges);
       //    std::cout << j << " " <<  i << std::endl;
     }
-    std::cout << edge_collection.size() << std::endl;
+    //std::cout << edge_collection.size() << std::endl;
     //mbtool->add_surface(vol,facets);//,edge_collection);
     mbtool->add_surface(vol,facets,edge_collection);
     //std::cout << j << " " << edges.Extent() << std::endl;
@@ -321,6 +325,27 @@ void facet_all_volumes(Handle_TopTools_HSequenceOfShape shape_list){
 }
 
 STEPControl_Reader *step;
+
+//dump all labels
+void dump_labels() {
+  const Handle(XSControl_WorkSession)& theSession = step->WS();
+  const Handle(Interface_InterfaceModel)& theModel = theSession->Model();
+
+  Standard_Integer nb = theModel->NbEntities();
+  for(Standard_Integer i=1; i<=nb; i++)
+    {
+
+      Handle(StepRepr_Representation) ent =
+	Handle(StepRepr_Representation)::DownCast
+	(theModel->Value(i));
+      if (ent.IsNull()) continue;
+      if (ent->Name().IsNull()) continue;
+      std::cout << ent->Name()->ToCString() << std::endl;
+    }
+  return;
+}
+
+
 int main (int argc, char* argv[]) {
 
   std::string cad_file(argv[1]);
@@ -342,29 +367,27 @@ int main (int argc, char* argv[]) {
     bool ok = step->TransferRoot(i);
     if (ok) {
       shape = step->Shape(i);
-      //shape_list->Append(shape);
-
-      
+      // sew together all the curves
       BRepOffsetAPI_Sewing(1.0e-06, Standard_True);
       BRepOffsetAPI_Sewing sew;
       sew.Add(shape);
       sew.Perform();
       shape = sew.SewedShape();
       shape_list->Append(shape);
+      break;
     } else {
       std::cout << "Couldnt read shape " << std::endl;
     }
   }
   std::cout << "Instanciated " << shape_list->Length() << " items from file" << std::endl;
-  //step->TransferRoots();
-  //TopoDS_Shape shape = step->OneShape(); 
-  //  std::cout << shape.IsNull() << " " << shape.Closed() << " " << shape.Convex() << std::endl;
-  //shape = step->OneShape();
-  //shape = step->OneShape();
+
   std::cout << count << " entities read from file " << std::endl;
-  //step->TransferList(list);
+
+  dump_labels();
+  
   facet_all_volumes(shape_list);
   mbtool->write_geometry(filename.c_str());
   delete mbtool;
   return 0;
 }
+

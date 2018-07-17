@@ -374,7 +374,7 @@ int main (int argc, char* argv[]) {
       sew.Perform();
       shape = sew.SewedShape();
       shape_list->Append(shape);
-      break;
+      //break;
     } else {
       std::cout << "Couldnt read shape " << std::endl;
     }

@@ -266,7 +266,7 @@ moab::ErrorCode DAGMCTopology::find_curve_pairs(const std::map<int,moab::Range> 
       ++show_progress;
       //      rval = compare_curves(curve,curve_list,matches);
       rval = compare_curves(curve_list_v[i],curve_list,matches);
-      pairs_private.insert(pairs.end(),matches.begin(),matches.end());
+      pairs_private.insert(pairs_private.end(),matches.begin(),matches.end());
     }
     #pragma omp critical
     {

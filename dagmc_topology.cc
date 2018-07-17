@@ -1,4 +1,5 @@
 #include "dagmc_topology.hpp"
+#include "boost/progress.hpp"
 #include "MBTagConventions.hpp"
 #include <iostream>
 
@@ -55,6 +56,7 @@ moab::ErrorCode DAGMCTopology::setup_tags() {
 // identify and fix up coincident surfaces
 moab::ErrorCode DAGMCTopology::perform_merge() {
   std::vector<merge_pairs_t> coincident;
+  std::cout << "Identifying coincient curves..." << std::endl;
   moab::ErrorCode rval = identify_coincident(coincident);
   if ( rval != moab::MB_SUCCESS ) return rval;
   if ( coincident.size() == 0 ) std::cout << "no curve pairs found" << std::endl;
@@ -63,14 +65,17 @@ moab::ErrorCode DAGMCTopology::perform_merge() {
   // ie. curve 1 same as curve 2, curve 3 same as 2 and curve 4 same as 3
   // i.e. curve1 === curve2 ; curve1 === curve3 ; curve1 === curve4
   std::vector<merge_pairs_t> reduced_list;
+  std::cout << "Removing duplicate curves..." << std::endl;
   rval = remove_duplicate_curves(coincident,reduced_list);
   // now merge the curves together
+  std::cout << "Merging coincident curves..." << std::endl;
   rval = merge_coincident_curves(reduced_list,true);
 
   // determine surfaces that are coinicident
   std::vector<merge_pairs_t> coincident_surfaces;
+  std::cout << "Identfying coincident surfaces..." << std::endl;
   rval = identify_coincident_surfaces(coincident_surfaces);
-
+  std::cout << "Merging duplicate surfaces..." << std::endl;
   rval = merge_duplicate_surfaces(coincident_surfaces,true);
   
   return rval;
@@ -151,12 +156,6 @@ moab::ErrorCode DAGMCTopology::get_curve_lengths(moab::Range curves,
     edges.clear();
     rval = mbi->get_entities_by_type(curve,moab::MBEDGE,edges);
     int count = edges.size();
-    std::cout << count << std::endl;
-    if( count == 0 ) {
-      std::cout << "curve " << id[0] << " " << curve << " has no edges." << std::endl;
-    } else {
-      std::cout << "Curve " << id[0] << " " << curve << " has " << edges.size() << " edges." << std::endl;
-    }
     // 
     moab::Range existing_range = curves_and_counts[count];
     existing_range.insert(curve);
@@ -165,10 +164,6 @@ moab::ErrorCode DAGMCTopology::get_curve_lengths(moab::Range curves,
     curves_and_counts[count] = existing_range;
   }
 
-  // print the pair and curve counts
-  for ( std::pair<int,moab::Range> pair : curves_and_counts ) {
-    std::cout << "count: " << pair.first << " num_edges:" << pair.second.size() << std::endl;
-  }
   return moab::MB_SUCCESS;
 }
 
@@ -251,11 +246,32 @@ moab::ErrorCode DAGMCTopology::find_curve_pairs(const std::map<int,moab::Range> 
   }
   moab::ErrorCode rval = moab::MB_FAILURE;
   // loop over each curve and compare
-  for ( moab::EntityHandle curve : curve_list ) {
-    std::vector<merge_pairs_t> matches;
-    // compare all the curves and generate a list 
-    rval = compare_curves(curve,curve_list,matches);
-    pairs.insert(pairs.end(),matches.begin(),matches.end());
+
+  moab::Range::iterator it;
+  std::vector<moab::EntityHandle> curve_list_v;
+  for ( it = curve_list.begin() ; it != curve_list.end() ; ++it ) {
+    curve_list_v.push_back(*it);
+  }
+  
+  boost::progress_display show_progress(curve_list.size());
+  #pragma omp parallel
+  {
+    std::vector<merge_pairs_t> pairs_private;
+    moab::Range::iterator it;
+    #pragma omp for
+    //    for ( moab::EntityHandle curve : curve_list ) {
+    for ( int i = 0  ; i < curve_list_v.size() ; i++ ) {
+      std::vector<merge_pairs_t> matches;
+      // compare all the curves and generate a list 
+      ++show_progress;
+      //      rval = compare_curves(curve,curve_list,matches);
+      rval = compare_curves(curve_list_v[i],curve_list,matches);
+      pairs_private.insert(pairs.end(),matches.begin(),matches.end());
+    }
+    #pragma omp critical
+    {
+      pairs.insert(pairs.end(),pairs_private.begin(),pairs_private.end());
+    }
   }
   
   return moab::MB_SUCCESS;
@@ -365,7 +381,6 @@ moab::ErrorCode DAGMCTopology::identify_coincident_surfaces(std::vector<merge_pa
 moab::ErrorCode DAGMCTopology::merge_duplicate_surfaces(const std::vector<merge_pairs_t> duplicates,
 							const bool remove) {
   moab::ErrorCode rval = moab::MB_FAILURE;
-
   // new topology tool
   moab::GeomTopoTool *gtt = new moab::GeomTopoTool(mbi,false,input_set);
   

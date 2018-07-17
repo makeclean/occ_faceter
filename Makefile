@@ -14,6 +14,7 @@ INC = $(OCC_INC) $(MOAB_INC)
 
 CXX = g++
 CXXFLAGS = -g -std=c++11 $(INC)
+OMP_FLAGS = -fopenmp
 
 .PHONY: default all clean
 
@@ -32,10 +33,10 @@ dagmc_faceter: mbtool.o dagmc_faceter.o
 	$(CXX) $(CXXFLAGS) dagmc_faceter.o mbtool.o $(OCC_LIBS) $(MOAB_LIBS) -o dagmc_faceter
 
 dagmc_topology.o: dagmc_topology.cc
-	$(CXX) $(CXXFLAGS) -c dagmc_topology.cc -o dagmc_topology.o
+	$(CXX) $(CXXFLAGS) $(OMP_FLAGS) -c dagmc_topology.cc -o dagmc_topology.o
 
 dagmc_merge: dagmc_topology.o
-	$(CXX) $(CXXFLAGS) dagmc_topology.o dagmc_merge.cc $(MOAB_LIBS) -o dagmc_merge
+	$(CXX) $(CXXFLAGS) $(OMP_FLAGS) dagmc_topology.o dagmc_merge.cc $(MOAB_LIBS) -o dagmc_merge
 
 dagmc_slicer.o: dagmc_slicer.cc $(HEADERS)
 	$(CXX) $(CXXFLAGS) -c dagmc_slicer.cc -o dagmc_slicer.o

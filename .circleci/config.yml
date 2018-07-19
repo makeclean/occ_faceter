@@ -7,12 +7,10 @@ jobs:
     steps:
       - checkout
       - run:
-      	  name: Update image
       	  command: sudo apt-get install libcgal-dev liboce-foundation-dev cmake git \
 	  	   libhdf5-dev libblas-dev liblapack-dev g++ gfortran
   test:
     - run:
-        name: Run Tests
 	command: echo hello world
 
 workflows:
@@ -20,6 +18,4 @@ workflows:
   build_and_test:
     jobs:
       - build
-	 - test:
-    	     requires:
-	       - build
+      - test

@@ -3,12 +3,12 @@ jobs:
   build:
     docker:
       - image: debian:stretch
-      
     steps:
       - checkout
       - run:
-      	  command: sudo apt-get install libcgal-dev liboce-foundation-dev cmake git \
-	  	   libhdf5-dev libblas-dev liblapack-dev g++ gfortran
+      	  command: | 
+            sudo apt-get install libcgal-dev liboce-foundation-dev cmake git \
+	    libhdf5-dev libblas-dev liblapack-dev g++ gfortran
   test:
     - run:
 	command: echo hello world

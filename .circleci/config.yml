@@ -4,17 +4,15 @@ jobs:
     docker:
       - image: debian:stretch	
     steps:
-      - checkout:
+      - checkout
       - run:
       	  name: Update image
-      	  command: sudo apt-get install libcgal-dev liboce-foundation-dev cmake git \ &&
+      	  command: sudo apt-get install libcgal-dev liboce-foundation-dev cmake git \
 	  	   libhdf5-dev libblas-dev liblapack-dev g++ gfortran
-      - run:
-          name: Greeting
-          command: echo Hello, world.
-      - run:
-          name: Print the Current date
-	  command: date
+   test:
+     - run:
+         name: Run Tests
+	 command: echo hello world
 
 workflows:
   version: 2

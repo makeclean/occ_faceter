@@ -7,7 +7,7 @@ jobs:
       - checkout
       - run:
       	  command: | 
-            sudo apt-get install libcgal-dev liboce-foundation-dev cmake git \
+            sudo apt-get install libcgal-dev liboce-foundation-dev cmake git 
 	    libhdf5-dev libblas-dev liblapack-dev g++ gfortran
   test:
     - run:

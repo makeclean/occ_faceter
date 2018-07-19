@@ -2,17 +2,18 @@ version: 2
 jobs:
   build:
     docker:
-      - image: debian:stretch	
+      - image: debian:stretch
+      
     steps:
       - checkout
       - run:
       	  name: Update image
       	  command: sudo apt-get install libcgal-dev liboce-foundation-dev cmake git \
 	  	   libhdf5-dev libblas-dev liblapack-dev g++ gfortran
-   test:
-     - run:
-         name: Run Tests
-	 command: echo hello world
+  test:
+    - run:
+        name: Run Tests
+	command: echo hello world
 
 workflows:
   version: 2

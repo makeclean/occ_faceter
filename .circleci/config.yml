@@ -1,0 +1,17 @@
+version: 2
+jobs:
+  build:
+    docker:
+      - image: debian:stretch	
+    steps:
+      - checkout
+      - run:
+      	  name: Update image
+      	  command: sudo apt-get install libcgal-dev liboce-foundation-dev cmake git \ &&
+	  	   libhdf5-dev libblas-dev liblapack-dev g++ gfortran
+      - run:
+          name: Greeting
+          command: echo Hello, world.
+      - run
+          name: Print the Current date
+	  command: date

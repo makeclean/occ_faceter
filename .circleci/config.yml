@@ -21,9 +21,7 @@ jobs:
              cd ../..;
              rm -rf moab
       - run: make MOAB_DIR=/opt/moab CGAL_DIR=/usr/ OCC_DIR=/usr/
-	     
-	  
-
+ 
 #version: 2
 #jobs:
 #  build:

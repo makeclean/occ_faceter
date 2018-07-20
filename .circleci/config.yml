@@ -18,8 +18,8 @@ jobs:
              --with-hdf5=/usr/lib/x86_64-linux-gnu/hdf5/serial --prefix=/opt/moab;
              make ;
              make install;
-	     cd ../..;
-	     rm -rf moab
+             cd ../..;
+             rm -rf moab
       - run: make MOAB_DIR=/opt/moab CGAL_DIR=/usr/ OCC_DIR=/usr/
 	     
 	  

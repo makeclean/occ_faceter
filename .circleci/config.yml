@@ -10,13 +10,13 @@ jobs:
              libhdf5-dev libblas-dev liblapack-dev g++ gfortran
       - run: git clone https://bitbucket.org/fathomteam/moab;
              cd moab;
-	     autoreconf -fi;
-	     mkdir bld;
-	     cd bld;
-	     ../configure --enable-optimize --enable-shared
-	     --with-hdf5=/usr/lib/x86_64-linux-gnu/hdf5/serial --prefix=/opt/moab;
-	     make ;
-	     make install
+             autoreconf -fi;
+             mkdir bld;
+             cd bld;
+             ../configure --enable-optimize --enable-shared
+             --with-hdf5=/usr/lib/x86_64-linux-gnu/hdf5/serial --prefix=/opt/moab;
+             make ;
+             make install
 
 #version: 2
 #jobs:

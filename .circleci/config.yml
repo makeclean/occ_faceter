@@ -5,7 +5,10 @@ jobs:
       - image: debian:stretch
     steps:
       - checkout
-      - run: echo "hello world"
+      - run:
+      	  name: Dependencies install
+	  commmand: sudo apt-get install libcgal-dev liboce-foundation-dev cmake git
+                    libhdf5-dev libblas-dev liblapack-dev g++ gfortran 
 
 #version: 2
 #jobs:
@@ -16,8 +19,7 @@ jobs:
 #      - checkout
 #      - run:
 #         command: |
-#           sudo apt-get install libcgal-dev liboce-foundation-dev cmake git
-#           libhdf5-dev libblas-dev liblapack-dev g++ gfortran
+#           
 #  test:
 #    - run:
 #       command: echo hello world

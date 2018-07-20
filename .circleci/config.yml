@@ -5,6 +5,7 @@ jobs:
       - image: debian:stretch
     steps:
       - checkout
+      - run: apt-get update
       - run: apt-get install -y libcgal-dev liboce-foundation-dev cmake git
              libhdf5-dev libblas-dev liblapack-dev g++ gfortran
 

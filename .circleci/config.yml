@@ -17,7 +17,12 @@ jobs:
              ../configure --enable-optimize --enable-shared
              --with-hdf5=/usr/lib/x86_64-linux-gnu/hdf5/serial --prefix=/opt/moab;
              make ;
-             make install
+             make install;
+	     cd ../..;
+	     rm -rf moab
+      - run: make MOAB_DIR=/opt/moab CGAL_DIR=/usr/ OCC_DIR=/usr/
+	     
+	  
 
 #version: 2
 #jobs:

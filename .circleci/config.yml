@@ -20,7 +20,11 @@ jobs:
              make install;
              cd ../..;
              rm -rf moab
-      - run: make MOAB_DIR=/opt/moab CGAL_DIR=/usr/ OCC_DIR=/usr/
+      - run: mkdir bld ;
+             cd bld ;
+             cmake .. ;
+             make ;
+             make test
  
 #version: 2
 #jobs:

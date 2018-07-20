@@ -1,20 +1,8 @@
 #include "vertex_inserter.hh"
 #include <iostream>
 
-int main(int argc, char* argv[]) {
-  VertexInserter *vi = new VertexInserter(1.e-4);
-  moab::EntityHandle eh = 0;
-  moab::ErrorCode rval = moab::MB_FAILURE;
-  rval = vi->insert_vertex({0,0,0},eh);
-  rval = vi->insert_vertex({0,1,0},eh);
-  rval = vi->insert_vertex({0,0,1},eh);
-  rval = vi->insert_vertex({0,0,0},eh);
-  rval = vi->insert_vertex({0,1,0},eh);
-  rval = vi->insert_vertex({0,0,1},eh);
-  rval = vi->insert_vertex({0,0,1.-1.e-5},eh);
-  delete vi;
-  return 0;
-}
+// global vector of hits
+std::vector<int> hits;
 
 bool callback(int id) {  
   hits.push_back(id);

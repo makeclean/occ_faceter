@@ -1,6 +1,11 @@
 # cgal includes
 INCLUDE_DIRECTORIES(${MOAB_INCLUDE_DIRS})
 INCLUDE_DIRECTORIES(${OCE_INCLUDE_DIRS})
+INCLUDE_DIRECTORIES(.)
+INCLUDE_DIRECTORIES(catch)
+
+ADD_LIBRARY(vertex_inserter vertex_inserter.cc)
+
 ADD_LIBRARY(mbtool MBTool.cpp)
 
 # occ faceter
@@ -21,3 +26,5 @@ TARGET_LINK_LIBRARIES(dagmc_slicer ${MOAB_LIBRARIES} ${CGAL_LIBRARY} boost_syste
 INSTALL(TARGETS dagmc_slicer DESTINATION bin)
 INSTALL(TARGETS dagmc_merge DESTINATION bin)
 INSTALL(TARGETS occ_faceter DESTINATION bin)
+
+ADD_SUBDIRECTORY(test)

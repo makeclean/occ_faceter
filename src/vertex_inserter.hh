@@ -1,9 +1,9 @@
+#ifndef VERTEX_INSERTER_HH
+#define VERTEX_INSERTER_HH 1
+
 #include "rtree/RTree.h"
 #include "moab/Types.hpp"
 #include <iostream>
-
-// global vector of hits
-std::vector<int> hits;
 
 // class to handle the insertion of vertices into moab such
 // that they are garenteed to be unique. Each point to be added
@@ -111,3 +111,4 @@ class VertexInserter {
     std::vector<Box> boxes; // vector of boxes added
 };
 
+#endif // VERTEX_INSERTER_HH

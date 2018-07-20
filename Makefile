@@ -18,10 +18,11 @@ CXX = g++
 CXXFLAGS = -g -std=c++11 $(INC)
 OMP_FLAGS = -fopenmp
 
-.PHONY: default all clean
+.PHONY: default all clean test
 
 default:  dagmc_faceter dagmc_slicer dagmc_merge
 all: default
+test: test1
 
 HEADERS = MBTool.hpp
 
@@ -44,7 +45,7 @@ dagmc_slicer.o: dagmc_slicer.cc $(HEADERS)
 	$(CXX) $(CXXFLAGS) -c dagmc_slicer.cc -o dagmc_slicer.o
 
 dagmc_slicer: dagmc_slicer.o $(HEADERS)
-	$(CXX) $(CXXFLAGS) dagmc_slicer.o $(CGAL_LIBS) $(MOAB_LIBS) -o dagmc_slicer
+        $(CXX) $(CXXFLAGS) dagmc_slicer.o $(CGAL_LIBS) $(MOAB_LIBS) -o dagmc_slicer
 
 clean:
 	-rm -f *.o

@@ -8,6 +8,7 @@ MBTool::MBTool() {
     volID = 0;
     surfID = 0;
     curveID = 0;
+    existing_vertices.clear();
     // make a new meshset to put stuff in
     moab::ErrorCode rval = mbi->create_meshset(moab::MESHSET_SET, rootset);
     rval = mbi->tag_get_handle(GEOM_DIMENSION_TAG_NAME, 1, moab::MB_TYPE_INTEGER, geometry_dimension_tag, moab::MB_TAG_DENSE | moab::MB_TAG_CREAT);
@@ -118,13 +119,14 @@ moab::ErrorCode MBTool::make_new_curve(moab::EntityHandle &curve) {
 moab::ErrorCode MBTool::check_vertex_exists(std::array<double,3> coord, moab::EntityHandle &tVertex) {
   // get the vertices
   tVertex = 0;
-  //  moab::Range vertices;
-  //  moab::ErrorCode rval = mbi->get_entities_by_type(0,moab::MBVERTEX,vertices);
-  //if ( rval != moab::MB_SUCCESS) {
-  //  return rval;
-  // }
+  moab::Range vertices;
+  moab::ErrorCode rval = mbi->get_entities_by_type(0,moab::MBVERTEX,vertices);
+  if ( rval != moab::MB_SUCCESS) {
+    return rval;
+  }
   // check each vertex in turn
-  for ( moab::EntityHandle vert : existing_vertices ) {
+  // for ( moab::EntityHandle vert : existing_vertices ) {
+  for ( moab::EntityHandle vert : vertices ) {
     double xyz[3];
     // get the coordinate value
     moab::ErrorCode rval = mbi->get_coords(&vert,1,&xyz[0]);
@@ -153,7 +155,7 @@ moab::ErrorCode MBTool::check_vertex_exists(std::array<double,3> coord, moab::En
      moab::ErrorCode rval = check_vertex_exists(coord, vert);
      if ( rval == moab::MB_ENTITY_NOT_FOUND ) { 
        moab::ErrorCode rval = mbi->create_vertex(coord.data(), vert);
-       existing_vertices.insert(vert);
+       // existing_vertices.insert(vert);
        if(rval != moab::MB_SUCCESS ) {
 	 std::cout << "Could not create vertex" << std::endl;
        }
@@ -191,6 +193,7 @@ moab::ErrorCode MBTool::add_facets_and_curves_to_surface(moab::EntityHandle surf
      moab::ErrorCode rval = check_vertex_exists(coord, vert);
      if ( rval == moab::MB_ENTITY_NOT_FOUND ) { 
        moab::ErrorCode rval = mbi->create_vertex(coord.data(), vert);
+       //existing_vertices.insert(vert);
      } 
      vertex_map[idx] = vert;
      idx++;

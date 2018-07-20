@@ -4,6 +4,8 @@
 #include <vector>
 #include <array>
 
+#include "rtree/RTree.h"
+
 // convenient return for facets
 struct facet_data {
   std::vector<std::array<double,3> > coords;
@@ -50,4 +52,5 @@ private:
   moab::Tag category_tag;
 
   moab::Range existing_vertices;
+
 };

@@ -22,7 +22,7 @@ jobs:
              rm -rf moab
       - run: mkdir bld ;
              cd bld ;
-             cmake .. -DMOAB_ROOT=/opt/moab;
+             MOAB_ROOT=/opt/moab cmake .. ;
              make ;
              make test
  

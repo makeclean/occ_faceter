@@ -246,34 +246,17 @@ moab::ErrorCode DAGMCTopology::find_curve_pairs(const std::map<int,moab::Range> 
   }
   moab::ErrorCode rval = moab::MB_FAILURE;
   // loop over each curve and compare
-
-  moab::Range::iterator it;
-  std::vector<moab::EntityHandle> curve_list_v;
-  for ( it = curve_list.begin() ; it != curve_list.end() ; ++it ) {
-    curve_list_v.push_back(*it);
-  }
   
   boost::progress_display show_progress(curve_list.size());
-  #pragma omp parallel
-  {
-    std::vector<merge_pairs_t> pairs_private;
-    moab::Range::iterator it;
-    #pragma omp for
-    //    for ( moab::EntityHandle curve : curve_list ) {
-    for ( int i = 0  ; i < curve_list_v.size() ; i++ ) {
-      std::vector<merge_pairs_t> matches;
-      // compare all the curves and generate a list 
-      ++show_progress;
-      //      rval = compare_curves(curve,curve_list,matches);
-      rval = compare_curves(curve_list_v[i],curve_list,matches);
-      pairs_private.insert(pairs_private.end(),matches.begin(),matches.end());
-    }
-    #pragma omp critical
-    {
-      pairs.insert(pairs.end(),pairs_private.begin(),pairs_private.end());
-    }
+  for ( moab::EntityHandle curve : curve_list ) {
+    std::vector<merge_pairs_t> matches;
+    // compare all the curves and generate a list 
+    rval = compare_curves(curve,curve_list,matches);
+    ++show_progress;
+    //rval = compare_curves(curve_list_v[i],curve_list,matches);
+    pairs.insert(pairs.end(),matches.begin(),matches.end());
   }
-  
+  std::cout << std::endl;
   return moab::MB_SUCCESS;
 }
 
@@ -345,16 +328,19 @@ moab::ErrorCode DAGMCTopology::compare_surface_curves(const moab::EntityHandle s
 						      std::vector<merge_pairs_t> &surface_pairs) {
   
   moab::ErrorCode rval = moab::MB_FAILURE;
+  boost::progress_display show_progress(surface_set.size());
   for ( moab::EntityHandle comparison_surface : surface_set ) {
     if ( comparison_surface == surface ) break;
     bool same = false;
     rval = compare_surfaces(surface,comparison_surface,same);
+    ++show_progress;
     if ( same ) {
       std::pair<moab::EntityHandle,moab::EntityHandle> pair(std::min(surface,comparison_surface),
 							    std::max(surface,comparison_surface));
       surface_pairs.push_back(pair);
     }
   }
+  std::cout << std::endl;
   return rval;
 }
 

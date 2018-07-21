@@ -1,6 +1,6 @@
 version: 2
 jobs:
-  "ubuntu-testing":
+  build:
     docker:
       - image: ubuntu:xenial
       - image: ubuntu:artful

@@ -1,8 +1,12 @@
 version: 2
 jobs:
+  "ubuntu-testing"
   build:
     docker:
       - image: ubuntu:xenial
+      - image: ubuntu:artful
+      - image: ubuntu:bionic
+      - image: ubuntu:cosmic
     steps:
       - checkout
       - run: apt-get update

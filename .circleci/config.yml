@@ -22,7 +22,8 @@ jobs:
              rm -rf moab
       - run: mkdir bld ;
              cd bld ;
-             MOAB_ROOT=/opt/moab cmake .. ;
+             export LD_LIBRARY_PATH=/opt/moab/lib ;
+             cmake .. ;
              make ;
              make test
  

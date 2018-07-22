@@ -3,9 +3,9 @@ jobs:
   build:
     docker:
       - image: ubuntu:xenial
-      - image: ubuntu:artful
-      - image: ubuntu:bionic
-      - image: ubuntu:cosmic
+#      - image: ubuntu:artful
+#      - image: ubuntu:bionic
+#      - image: ubuntu:cosmic
     steps:
       - checkout
       - run: apt-get update

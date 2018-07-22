@@ -1,7 +1,7 @@
 #include <iostream>
 #include <array>
 
-#include "BRep_Tool.hxx"
+//#include "BRep_Tool.hxx"
 #include "BRepMesh_IncrementalMesh.hxx"
 #include "Poly_Array1OfTriangle.hxx"
 #include "TColgp_Array1OfPnt.hxx"
@@ -9,7 +9,7 @@
 #include "Poly_Triangulation.hxx"
 #include "Poly_PolygonOnTriangulation.hxx"
 
-#include "IFSelect_PrintCount.hxx"
+//#include "IFSelect_PrintCount.hxx"
 #include "STEPControl_Reader.hxx"
 
 #include "TopoDS.hxx"

@@ -5,6 +5,7 @@
 #include <array>
 
 #include "rtree/RTree.h"
+#include "vertex_inserter.hh"
 
 // convenient return for facets
 struct facet_data {
@@ -42,7 +43,8 @@ private:
 						    facet_data facetData,
 						    std::vector<edge_data> edge_data);
   private:
-  moab::Core *mbi = NULL;
+  moab::Core *mbi;
+  VertexInserter *vi;
   int volID;
   int surfID;
   int curveID;

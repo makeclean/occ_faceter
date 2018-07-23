@@ -12,7 +12,7 @@ ADD_LIBRARY(mbtool MBTool.cpp)
 LINK_DIRECTORIES("/usr/lib/x86_64-linux-gnu/")
 ADD_EXECUTABLE(occ_faceter dagmc_faceter.cc)
 SET(OCE_LINK_LIBS TKSTEP TKXSBase TKernel TKMath TKMesh TKTopAlgo TKBRep TKSTEPBase)
-TARGET_LINK_LIBRARIES(occ_faceter mbtool ${MOAB_LIBRARIES} ${OCE_LINK_LIBS})
+TARGET_LINK_LIBRARIES(occ_faceter mbtool vertex_inserter ${MOAB_LIBRARIES} ${OCE_LINK_LIBS})
 
 ADD_LIBRARY(dagmc_topology dagmc_topology.cc)
 # dagmc merger

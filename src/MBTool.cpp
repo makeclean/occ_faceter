@@ -5,6 +5,11 @@
 // default constructor
 MBTool::MBTool() {
     if(mbi == NULL) mbi = new moab::Core();
+
+    // new vertex inserter
+    VertexInserter *vi = new VertexInserter(mbi,1.e-6); // should pass the
+                                                        // tolernace by arg
+    
     volID = 0;
     surfID = 0;
     curveID = 0;
@@ -119,6 +124,11 @@ moab::ErrorCode MBTool::make_new_curve(moab::EntityHandle &curve) {
 moab::ErrorCode MBTool::check_vertex_exists(std::array<double,3> coord, moab::EntityHandle &tVertex) {
   // get the vertices
   tVertex = 0;
+
+  moab::ErrorCode rval = moab::MB_FAILURE;
+  rval = vi->insert_vertex(coord,tVertex);
+  return rval;
+  /*
   moab::Range vertices;
   moab::ErrorCode rval = mbi->get_entities_by_type(0,moab::MBVERTEX,vertices);
   if ( rval != moab::MB_SUCCESS) {
@@ -139,7 +149,7 @@ moab::ErrorCode MBTool::check_vertex_exists(std::array<double,3> coord, moab::En
       return moab::MB_SUCCESS;
     } 
   }
-  return moab::MB_ENTITY_NOT_FOUND;
+  return moab::MB_ENTITY_NOT_FOUND; */
 }
 
 // add facets to surface

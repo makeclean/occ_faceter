@@ -7,8 +7,8 @@ MBTool::MBTool() {
     if(mbi == NULL) mbi = new moab::Core();
 
     // new vertex inserter
-    VertexInserter *vi = new VertexInserter(mbi,1.e-6); // should pass the
-                                                        // tolernace by arg
+    vi = new VertexInserter(mbi,1.e-6); // should pass the
+                                        // tolernace by arg
     
     volID = 0;
     surfID = 0;

@@ -21,7 +21,7 @@ TARGET_LINK_LIBRARIES(dagmc_merge dagmc_topology ${MOAB_LIBRARIES})
 
 # dagmc slicer
 ADD_EXECUTABLE(dagmc_slicer dagmc_slicer.cc)
-TARGET_LINK_LIBRARIES(dagmc_slicer ${MOAB_LIBRARIES} ${CGAL_LIBRARY} boost_system gmp)
+TARGET_LINK_LIBRARIES(dagmc_slicer ${MOAB_LIBRARIES} ${CGAL_LIBRARY} boost_system boost_program_options gmp)
 
 INSTALL(TARGETS dagmc_slicer DESTINATION bin)
 INSTALL(TARGETS dagmc_merge DESTINATION bin)

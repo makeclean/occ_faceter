@@ -52,7 +52,7 @@ private:
   moab::Tag geometry_dimension_tag, id_tag;
   moab::Tag faceting_tol_tag, geometry_resabs_tag;
   moab::Tag category_tag;
-
+  moab::Tag vol_id_tag, surf_id_tag; // tags for triangles for plotting
   moab::Range existing_vertices;
 
 };

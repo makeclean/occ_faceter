@@ -10,6 +10,9 @@
 #include "CGAL/AABB_traits.h"
 #include "CGAL/Polygon_mesh_slicer.h"
 
+// boost includes
+#include "boost/program_options.hpp"
+
 // system includes
 #include <fstream>
 #include <iostream>
@@ -185,10 +188,55 @@ int main(int argc, char* argv[]) {
   MBI = new moab::Core();
   moab::ErrorCode rval = moab::MB_FAILURE;
   moab::EntityHandle input_set;
+
+  boost::program_options::options_description desc("Allowed options");
+  desc.add_options()
+    ("help", "produce help message")
+    ("input-file", boost::program_options::value<std::string>(), "input file")
+    ("slice-position", boost::program_options::value< std::vector<double> >()->multitoken(), "slice_position")
+    ;
+
+  boost::program_options::positional_options_description p;
+  p.add("input_file", -1);
+
+  boost::program_options::variables_map vm;
+  boost::program_options::store(boost::program_options::command_line_parser(argc,argv).
+	    options(desc).positional(p).run(),vm);
+  boost::program_options::notify(vm);
+
+  if (vm.count("help")) {
+    std::cout << desc << std::endl;
+    return -1;
+  }
+
+  std::string filename = "";
+  if (vm.count("input-file")) {
+    filename = vm["input-file"].as<std::string>();
+  } else {
+    std::cout << "input-file not specified" << std::endl;
+    return -1;
+  }
+
+  std::vector<double> slice_position;
+  if (vm.count("slice-position")) {
+    slice_position = vm["slice-position"].as< std::vector<double> >();
+    if(slice_position.size() != 3) {
+      std::cout << "There needs to three elements" << std::endl;
+      return -1;
+    }
+  } else {
+    std::cout << "slice-position not specified" << std::endl;
+    return -1;
+  }
+
+  std::cout << "open file " << filename << std::endl;
+  std::cout << "slicing at " << slice_position[0] << " " << slice_position[1];
+  std::cout << " " << slice_position[2] << std::endl;
+  
   rval = MBI->create_meshset(moab::MESHSET_SET, input_set); 
   MB_CHK_SET_ERR(rval, "failed to create meshset");
   std::cout << "Loading input file..." << std::endl;
-  rval = MBI->load_file("test.h5m", &input_set);  
+  rval = MBI->load_file(filename.c_str(), &input_set);  
   
   // make the cgal geometry
   MOABInterface *cgal = new MOABInterface();
@@ -197,75 +245,17 @@ int main(int argc, char* argv[]) {
   std::map<int,Polylines> slices;
 
   double dir[3] = {0.,1.,0.};
-  slices = cgal->sliceGeometry(dir,0.);
+  slices = cgal->sliceGeometry(dir,slice_position[1]);
   cgal->writeSlice(slices, "slice1.txt");
   dir[1] = 0.;
   dir[2] = 1.0;
-  slices = cgal->sliceGeometry(dir,0.);
+  slices = cgal->sliceGeometry(dir,slice_position[0]);
   cgal->writeSlice(slices, "slice2.txt");
   dir[2] = 0.0;
   dir[0] = 1.0;
-  slices = cgal->sliceGeometry(dir,0.);
+  slices = cgal->sliceGeometry(dir,slice_position[2]);
   cgal->writeSlice(slices, "slice3.txt");
 
-  /*
-  // find a given volume - or for all the triangles
-  // rather than get all triangles at once, maybe need to go volume by
-  // volume
-  moab::Range triangles;
-  rval = MBI->get_entities_by_type(0,moab::MBTRI, triangles);
-  MB_CHK_SET_ERR(rval, "failed to find any triangles");
-  // now get a list of vertices
-  moab::Range vertices;
-  rval = MBI->get_vertices(triangles, vertices);
-  // now get make an indexable list
-  moab::Range::iterator it;
-
-
-  std::map<moab::EntityHandle,Mesh::Vertex_index> cgal_verts;
-
-  Mesh mesh;
-  double pos[3];
-  Mesh::Vertex_index idx;
-  for ( it = vertices.begin() ; it != vertices.end() ; ++it ) {
-    rval = MBI->get_coords(&(*it),1,&pos[0]);
-    idx = mesh.add_vertex(Vertex(pos[0],pos[1],pos[2]));
-    //Vertex point = Vertex(pos[0],pos[1],pos[2]);
-    //mesh.add_vertex(point);
-    cgal_verts[*it] = idx;
-  }
-
-  // now for each triangle make the triangle
-  for ( it = triangles.begin() ; it != triangles.end() ; ++it) {
-    std::vector<moab::EntityHandle> verts;
-    rval = MBI->get_connectivity(&(*it),1, verts);
-    Mesh::Vertex_index point1 = cgal_verts[verts[0]];
-    Mesh::Vertex_index point2 = cgal_verts[verts[1]];
-    Mesh::Vertex_index point3 = cgal_verts[verts[2]];
-			     
-    // Mesh.add_face(v1,v2,v3); - add all the triangles;
-    mesh.add_face(point1,point2,point3);     
-  }
-  
-  CGAL::Polygon_mesh_slicer<Mesh, K> slicer(mesh);
-  Polylines slice;
-  std::cout << "slice 1 ..." << std::endl;
-  slicer(K::Plane_3(0,0,1,0.0), std::back_inserter(slice));
-  write_slice(slice,"slice1.txt");
-  slice.clear();
-  std::cout << "slice 2 ..." << std::endl;
-  slicer(K::Plane_3(0,0,1,0.0), std::back_inserter(slice));
-  write_slice(slice,"slice2.txt");
-  slice.clear();
-  std::cout << "slice 3 ..." << std::endl;
-  slicer(K::Plane_3(0,1,0,0.0), std::back_inserter(slice));
-  write_slice(slice,"slice3.txt");
-  slice.clear();
-
-  // write mesh to off
-  std::ofstream outfile("mesh.off");
-  outfile << mesh;
-  */  
   return 0;
 
 }

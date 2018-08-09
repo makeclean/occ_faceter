@@ -6,7 +6,6 @@ find_path(OCC_CMAKE_CONFIG NAMES OpenCASCADEConfig.cmake
   PATH_SUFFIXES lib Lib cmake cmake/opencascade lib/cmake/opencascade
   NO_DEFAULT_PATH)
 
-MESSAGE(status ${OCC_CMAKE_CONFIG})
 if(OCC_CMAKE_CONFIG STREQUAL "OCC_CMAKE_CONFIG-NOTFOUND")
   set(OCC_FOUND FALSE)
 else()

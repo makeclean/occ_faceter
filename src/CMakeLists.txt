@@ -10,9 +10,12 @@ ADD_LIBRARY(mbtool MBTool.cpp)
 
 # occ faceter
 LINK_DIRECTORIES("/usr/lib/x86_64-linux-gnu/")
-ADD_EXECUTABLE(occ_faceter dagmc_faceter.cc)
-SET(OCE_LINK_LIBS TKSTEP TKXSBase TKernel TKMath TKMesh TKTopAlgo TKBRep TKSTEPBase)
-TARGET_LINK_LIBRARIES(occ_faceter mbtool vertex_inserter ${MOAB_LIBRARIES} ${OCE_LINK_LIBS})
+IF(OCE_FOUND)
+  ADD_EXECUTABLE(occ_faceter dagmc_faceter.cc)
+  SET(OCE_LINK_LIBS TKSTEP TKXSBase TKernel TKMath TKMesh TKTopAlgo TKBRep TKSTEPBase)
+  TARGET_LINK_LIBRARIES(occ_faceter mbtool vertex_inserter ${MOAB_LIBRARIES} ${OCE_LINK_LIBS})
+  INSTALL(TARGETS occ_faceter DESTINATION bin)
+ENDIF(OCC_FOUND)
 
 ADD_LIBRARY(dagmc_topology dagmc_topology.cc)
 # dagmc merger
@@ -25,6 +28,5 @@ TARGET_LINK_LIBRARIES(dagmc_slicer ${MOAB_LIBRARIES} ${CGAL_LIBRARY} boost_syste
 
 INSTALL(TARGETS dagmc_slicer DESTINATION bin)
 INSTALL(TARGETS dagmc_merge DESTINATION bin)
-INSTALL(TARGETS occ_faceter DESTINATION bin)
 
 ADD_SUBDIRECTORY(test)

@@ -4,6 +4,7 @@
 #include "rtree/RTree.h"
 #include "moab/Types.hpp"
 #include "moab/Core.hpp"
+#include <array>
 #include <iostream>
 
 // class to handle the insertion of vertices into moab such

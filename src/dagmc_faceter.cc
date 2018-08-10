@@ -21,7 +21,7 @@
 #include "TopExp_Explorer.hxx"
 #include "TopExp.hxx"
 
-#include "TopLoc_TrsfPtr.hxx"
+//#include "TopLoc_TrsfPtr.hxx"
 #include "TopLoc_Location.hxx"
 
 #include "BRepOffsetAPI_Sewing.hxx"

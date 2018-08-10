@@ -15,7 +15,7 @@ IF(OCE_FOUND)
   SET(OCE_LINK_LIBS TKSTEP TKXSBase TKernel TKMath TKMesh TKTopAlgo TKBRep TKSTEPBase)
   TARGET_LINK_LIBRARIES(occ_faceter mbtool vertex_inserter ${MOAB_LIBRARIES} ${OCE_LINK_LIBS})
   INSTALL(TARGETS occ_faceter DESTINATION bin)
-ENDIF(OCC_FOUND)
+ENDIF(OCE_FOUND)
 
 ADD_LIBRARY(dagmc_topology dagmc_topology.cc)
 # dagmc merger

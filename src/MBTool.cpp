@@ -154,8 +154,15 @@ moab::ErrorCode MBTool::add_facets_and_curves_to_surface(moab::EntityHandle surf
      connections[0] = vertex_map[connectivity[0]];
      connections[1] = vertex_map[connectivity[1]];
      connections[2] = vertex_map[connectivity[2]];
-     moab::ErrorCode rval = mbi->create_element(moab::MBTRI,connections,3,tri);
-     triangles.insert(tri);
+
+     if ( connections[2] == connections[1] || 
+          connections[1] == connections[0] || 
+          connections[2] == connections[0] ) {
+       std::cout << "degenerate triangle not created" << std::endl;
+     } else {
+       moab::ErrorCode rval = mbi->create_element(moab::MBTRI,connections,3,tri);
+       triangles.insert(tri);
+     }
    }
    // now make the edges
    moab::Range edges;

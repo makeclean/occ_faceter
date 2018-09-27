@@ -1,6 +1,7 @@
 # cgal includes
 INCLUDE_DIRECTORIES(${MOAB_INCLUDE_DIRS})
 INCLUDE_DIRECTORIES(${OPENCASCADE_INCLUDE_DIRS})
+INCLUDE_DIRECTORIES(${CGAL_INCLUDE_DIRS})
 INCLUDE_DIRECTORIES(.)
 INCLUDE_DIRECTORIES(catch)
 
@@ -26,7 +27,12 @@ TARGET_LINK_LIBRARIES(dagmc_merge dagmc_topology ${MOAB_LIBRARIES})
 ADD_EXECUTABLE(dagmc_slicer dagmc_slicer.cc)
 TARGET_LINK_LIBRARIES(dagmc_slicer ${MOAB_LIBRARIES} ${CGAL_LIBRARY} boost_system boost_program_options gmp)
 
+# dagmc_overlap
+ADD_EXECUTABLE(dagmc_overlap preper.cc)
+TARGET_LINK_LIBRARIES(dagmc_overlap vertex_inserter ${MOAB_LIBRARIES} ${CGAL_LIBRARY} boost_system boost_program_options gmp mpfr)
+
 INSTALL(TARGETS dagmc_slicer DESTINATION bin)
 INSTALL(TARGETS dagmc_merge DESTINATION bin)
+INSTALL(TARGETS dagmc_overlap DESTINATION bin)
 
 ADD_SUBDIRECTORY(test)

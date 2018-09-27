@@ -59,6 +59,7 @@ class NewVolsMOAB {
   NewVolsMOAB(){
     MOAB = new moab::Core();
     vi = new VertexInserter(MOAB);
+    setup_tags();
   }
 
   void setup_tags() {
@@ -125,7 +126,10 @@ class NewVolsMOAB {
           v != p.vertices_end() ; ++v ) {
         v->id() = idx++;
         CGAL::Point_3<K> point = v->point();
-        std::array<double,3> coords(point.x(),point.y(),point.z());
+        double x = CGAL::to_double(point.x());
+        double y = CGAL::to_double(point.y());
+        double z = CGAL::to_double(point.z());
+        std::array<double,3> coords = {x,y,z};
         moab::EntityHandle handle;
         rval = vi->insert_vertex(coords,handle);
         index_handle_map[v->id()] = handle;
@@ -158,7 +162,7 @@ class NewVolsMOAB {
     moab::ErrorCode rval = moab::MB_FAILURE;
     moab::Range surface;
     rval = getTrisFromPoly(p,surface);
-    return rval;
+
     // tag the surface set
     moab::EntityHandle surface_set;
     rval = MOAB->create_meshset(moab::MESHSET_SET,surface_set);
@@ -173,7 +177,13 @@ class NewVolsMOAB {
     rval = MOAB->add_parent_child(volume_set,surface_set);
     // add the triangles to the surface set 
     rval = MOAB->add_entities(surface_set,surface); 
+  
+  }
 
+  void write(std::string filename) {
+    moab::ErrorCode rval = moab::MB_FAILURE;
+    rval = MOAB->write_mesh(filename.c_str());
+    return;
   }
 
   // destructor
@@ -191,13 +201,16 @@ class NewVolsMOAB {
   moab::Tag name_tag;
 };
 
+
 class MOABInterface {
   public:
   MOABInterface(){
+    nvm = new NewVolsMOAB();
     setupInterface();
     getVolumeIDList();
   }
   ~MOABInterface(){
+    delete nvm;
   }
 
 // A modifier creating a triangle with the incremental builder.
@@ -420,23 +433,34 @@ class Build_triangle : public CGAL::Modifier_base<HDS> {
     Polyhedron p1 = geometry_poly[vol1];
     Polyhedron p2 = geometry_poly[vol2];
 
+    moab::ErrorCode rval = moab::MB_FAILURE;
+
     Nef_Polyhedron np1(p1);
     Nef_Polyhedron np2(p2);
     
     Nef_Polyhedron diff = np2 - np1;
 
+    Nef_Polyhedron up2 = np2 - diff;
+    Polyhedron update2;
+    up2.convert_to_polyhedron(update2);
+    up2.clear();
+
+    Nef_Polyhedron up1 = np1 - diff;
+    Polyhedron update1;
+    up1.convert_to_polyhedron(update1);
+    up1.clear();
+
     np1.clear();
     np2.clear();
 
     Polyhedron difference;
-
     diff.convert_to_polyhedron(difference);
-
     diff.clear();
 
-    NewVolsMOAB *nvm = new NewVolsMOAB();
-    moab::ErrorCode rval = nvm->addPolyhedron(difference,1);
- 
+    rval = nvm->addPolyhedron(update1,1);
+    rval = nvm->addPolyhedron(update2,2);
+    rval = nvm->addPolyhedron(difference,3);
+    nvm->write("new_geom.h5m");
 
     return;
   }
@@ -526,6 +550,7 @@ class Build_triangle : public CGAL::Modifier_base<HDS> {
   */
   
   private:
+  NewVolsMOAB *nvm;
   moab::Tag geometry_dimension_tag, id_tag;
   std::map<int, moab::EntityHandle> volmap;
   std::map<int, Mesh> geometry;

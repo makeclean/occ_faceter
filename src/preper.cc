@@ -16,7 +16,9 @@
 #include "CGAL/Polyhedron_incremental_builder_3.h"
 #include "CGAL/Nef_polyhedron_3.h"
 #include <CGAL/Polyhedron_items_with_id_3.h> 
-
+// mesh segmentation
+#include <CGAL/mesh_segmentation.h>
+#include <CGAL/property_map.h>
 
 
 #include "vertex_inserter.hh"
@@ -157,10 +159,52 @@ class NewVolsMOAB {
     return moab::MB_SUCCESS;
   }
 
+  void generateSurfaceSegmentation(Polyhedron p) {
+    // create a property-map for SDF values
+    typedef std::map<Polyhedron::Facet_const_handle, double> Facet_double_map;
+    Facet_double_map internal_sdf_map;
+    boost::associative_property_map<Facet_double_map> sdf_property_map(internal_sdf_map);
+    // compute SDF values using default parameters for number of rays, and cone angle
+    CGAL::sdf_values(p, sdf_property_map);
+    // create a property-map for segment-ids
+    typedef std::map<Polyhedron::Facet_const_handle, std::size_t> Facet_int_map;
+    Facet_int_map internal_segment_map;
+    boost::associative_property_map<Facet_int_map> segment_property_map(internal_segment_map);
+    // segment the mesh using default parameters for number of levels, and smoothing lambda
+    // Any other scalar values can be used instead of using SDF values computed using the CGAL function
+    std::size_t number_of_segments = CGAL::segmentation_from_sdf_values(p, sdf_property_map, segment_property_map);
+    std::cout << "Number of segments: " << number_of_segments << std::endl;
+    // print segment-ids
+    for(Polyhedron::Facet_const_iterator facet_it = p.facets_begin();
+        facet_it != p.facets_end(); ++facet_it) {
+        // ids are between [0, number_of_segments -1]
+        std::cout << segment_property_map[facet_it] << " ";
+    }
+    std::cout << std::endl;
+
+    const std::size_t number_of_clusters = 4;       // use 4 clusters in soft clustering
+    const double smoothing_lambda = 0.3;  // importance of surface features, suggested to be in-between [0,1]
+    // Note that we can use the same SDF values (sdf_property_map) over and over again for segmentation.
+    // This feature is relevant for segmenting the mesh several times with different parameters.
+    CGAL::segmentation_from_sdf_values(
+      p, sdf_property_map, segment_property_map, number_of_clusters, smoothing_lambda);
+     for(Polyhedron::Facet_const_iterator facet_it = p.facets_begin();
+        facet_it != p.facets_end(); ++facet_it) {
+        // ids are between [0, number_of_segments -1]
+        std::cout << segment_property_map[facet_it] << " ";
+     }
+     std::cout << std::endl;
+
+  }
+
   // add polyedron with id id
   moab::ErrorCode addPolyhedron(Polyhedron p, int id) {
     moab::ErrorCode rval = moab::MB_FAILURE;
     moab::Range surface;
+
+    // todo - figure out why we get 0's
+    // generateSurfaceSegmentation(p);
+
     rval = getTrisFromPoly(p,surface);
 
     // tag the surface set

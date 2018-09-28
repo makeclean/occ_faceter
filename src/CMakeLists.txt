@@ -23,9 +23,13 @@ ADD_LIBRARY(dagmc_topology dagmc_topology.cc)
 ADD_EXECUTABLE(dagmc_merge dagmc_merge.cc)
 TARGET_LINK_LIBRARIES(dagmc_merge dagmc_topology ${MOAB_LIBRARIES})
 
+# slcing library
+ADD_LIBRARY(dagmc_slicer dagmc_slicer.cc)
+TARGET_LINK_LIBRARIES(dagmc_slicer ${MOAB_LIBRARIES} ${CGAL_LIBRARIES} boost_system gmp)
+
 # dagmc slicer
-ADD_EXECUTABLE(dagmc_slicer dagmc_slicer.cc)
-TARGET_LINK_LIBRARIES(dagmc_slicer ${MOAB_LIBRARIES} ${CGAL_LIBRARY} boost_system boost_program_options gmp)
+ADD_EXECUTABLE(dagmc_slice_tool dagmc_slice_tool.cc)
+TARGET_LINK_LIBRARIES(dagmc_slice_tool dagmc_slicer ${MOAB_LIBRARIES} ${CGAL_LIBRARY} boost_system boost_program_options gmp)
 
 # dagmc_overlap
 ADD_EXECUTABLE(dagmc_overlap preper.cc)

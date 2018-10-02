@@ -17,6 +17,9 @@
 // Box struct to assist in the creation of the rtree. Boxes
 // store which moab entity handle they surround 
 //
+
+namespace VertexInserter {
+
 struct Box {
   // empty constuctor
   Box();
@@ -117,10 +120,10 @@ class VertexInserter {
   
   private:
     moab::Core *mbi; // class does not own it should not delete
-    RTree<int,double,3,float> rtree; /// the rtree to check against 
+    RTree::RTree<int,double,3,float> rtree; /// the rtree to check against 
     double box_tolerance; /// the insertion search tolerance
     int count; /// the number of boxes in the rtree
     std::vector<Box> boxes; // vector of boxes added
 };
-
+}
 #endif // VERTEX_INSERTER_HH

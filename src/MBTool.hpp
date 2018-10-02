@@ -44,7 +44,7 @@ private:
 						    std::vector<edge_data> edge_data);
   private:
   moab::Core *mbi;
-  VertexInserter *vi;
+  VertexInserter::VertexInserter *vi;
   int volID;
   int surfID;
   int curveID;

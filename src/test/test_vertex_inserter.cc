@@ -7,7 +7,7 @@
 
 TEST_CASE("test insertion", "[insert_vertex]") {
   moab::Core *mbi = new moab::Core();
-  VertexInserter *vi = new VertexInserter(mbi,1.e-6);
+  VertexInserter::VertexInserter *vi = new VertexInserter::VertexInserter(mbi,1.e-6);
   moab::EntityHandle eh = 0;
   moab::ErrorCode rval = moab::MB_FAILURE;
   rval = vi->insert_vertex({0,0,0},eh);
@@ -40,7 +40,7 @@ TEST_CASE("test insertion", "[insert_vertex]") {
 
 TEST_CASE("random insertion", "[random_insert]") {
   moab::Core *mbi = new moab::Core();
-  VertexInserter *vi = new VertexInserter(mbi,1.e-6);
+  VertexInserter::VertexInserter *vi = new VertexInserter::VertexInserter(mbi,1.e-6);
   int num = 100000;
 
   std::random_device rd;

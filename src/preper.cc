@@ -60,7 +60,7 @@ class NewVolsMOAB {
   // constructor
   NewVolsMOAB(){
     MOAB = new moab::Core();
-    vi = new VertexInserter(MOAB);
+    vi = new VertexInserter::VertexInserter(MOAB);
     setup_tags();
   }
 
@@ -235,7 +235,7 @@ class NewVolsMOAB {
     delete MOAB;
   }
   moab::Core *MOAB;
-  VertexInserter *vi;
+  VertexInserter::VertexInserter *vi;
   // tags
   moab::Tag geometry_dimension_tag;
   moab::Tag id_tag;

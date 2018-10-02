@@ -1,6 +1,8 @@
 #include "vertex_inserter.hh"
 #include <iostream>
 
+namespace VertexInserter {
+
 // global vector of hits
 std::vector<int> hits;
 
@@ -93,3 +95,4 @@ moab::ErrorCode VertexInserter::search_tree(const Box search,
   return moab::MB_FAILURE;
 }
 
+}

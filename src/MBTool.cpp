@@ -14,7 +14,7 @@ MBTool::MBTool() {
     if(mbi == NULL) mbi = new moab::Core();
 
     // new vertex inserter
-    vi = new VertexInserter(mbi,1.e-6); // should pass the
+    vi = new VertexInserter::VertexInserter(mbi,1.e-6); // should pass the
                                         // tolernace by arg  
     
     volID = 0;

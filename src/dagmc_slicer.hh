@@ -10,6 +10,9 @@
 #include "CGAL/AABB_traits.h"
 #include "CGAL/Polygon_mesh_slicer.h"
 
+#ifndef DAGMC_SLICER_HH 
+#define DAGMC_SLICER_HH 1
+
 // cgal typedefs
 typedef CGAL::Exact_predicates_inexact_constructions_kernel K;
 typedef CGAL::Surface_mesh<K::Point_3> Mesh;
@@ -39,3 +42,5 @@ class MOABInterface {
   std::map<int, moab::EntityHandle> volmap;
   std::map<int, Mesh> geometry;  
 };
+
+#endif

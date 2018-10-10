@@ -482,14 +482,14 @@ class Build_triangle : public CGAL::Modifier_base<HDS> {
     Nef_Polyhedron np1(p1);
     Nef_Polyhedron np2(p2);
     
-    Nef_Polyhedron diff = np2 - np1;
+    Nef_Polyhedron intersect = np2 * np1;
 
-    Nef_Polyhedron up2 = np2 - diff;
+    Nef_Polyhedron up2 = np2 - intersect;
     Polyhedron update2;
     up2.convert_to_polyhedron(update2);
     up2.clear();
 
-    Nef_Polyhedron up1 = np1 - diff;
+    Nef_Polyhedron up1 = np1 - intersect;
     Polyhedron update1;
     up1.convert_to_polyhedron(update1);
     up1.clear();
@@ -498,8 +498,8 @@ class Build_triangle : public CGAL::Modifier_base<HDS> {
     np2.clear();
 
     Polyhedron difference;
-    diff.convert_to_polyhedron(difference);
-    diff.clear();
+    intersect.convert_to_polyhedron(difference);
+    intersect.clear();
 
     rval = nvm->addPolyhedron(update1,1);
     rval = nvm->addPolyhedron(update2,2);

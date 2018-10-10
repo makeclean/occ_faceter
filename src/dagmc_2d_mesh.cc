@@ -139,11 +139,11 @@ void make_2d_triangulation(const std::map<int,Polylines> slices) {
         double y_new = CGAL::to_double(point.y());
         //std::cout << x_new << " " << y_new << std::endl;
         //std::cout << " segment " << std::endl;
-        //if ( x_new != x_old || y_new != y_old ) {
+        if ( x_new != x_old || y_new != y_old ) {
           polygon.push_back(Point(point.x(),point.y()));
           //polygon.push_back(Point(x_new,y_old));
           //cdt.insert(Point(point.x(),point.y()));
-        //} 
+        } 
         x_old = x_new;
         y_old = y_new;
         //std::cout << polygon << std::endl;

@@ -33,7 +33,12 @@ TARGET_LINK_LIBRARIES(dagmc_slice_tool dagmc_slicer ${MOAB_LIBRARIES} ${CGAL_LIB
 
 # dagmc 2d mesher
 ADD_EXECUTABLE(dagmc_2d_mesh dagmc_2d_mesh.cc)
+#ADD_DEFINITIONS(-DCGAL_USE_BASIC_VIEWER)
 TARGET_LINK_LIBRARIES(dagmc_2d_mesh dagmc_slicer vertex_inserter ${MOAB_LIBRARIES} ${CGAL_LIBRARY} boost_system boost_program_options gmp)
+
+# dagmc 3d mesher
+ADD_EXECUTABLE(dagmc_mesher dagmc_mesher.cc)
+TARGET_LINK_LIBRARIES(dagmc_mesher vertex_inserter ${MOAB_LIBRARIES} ${CGAL_LIBRARY} boost_system boost_program_options gmp mpfr)
 
 # dagmc_overlap
 ADD_EXECUTABLE(dagmc_overlap preper.cc)

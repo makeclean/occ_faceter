@@ -103,6 +103,39 @@ void mark_domains(CDT& cdt) {
   }
 }
 
+Polygon_2 make_poly_from_segments(const Polyline_type segments) {
+
+  double x_old,y_old = 0.0;
+
+  Polygon_2 polygon;
+  
+  for ( K2::Point_3 point : segments ) {
+    double x_new = CGAL::to_double(point.x());
+    double y_new = CGAL::to_double(point.z());
+    std::cout << x_old << " " << y_old << std::endl;
+    std::cout << x_new << " " << y_new << std::endl;
+
+    if ( x_new != x_old && y_new != y_old ) {
+      polygon.push_back(Point(point.x(),point.z()));
+    } else {
+      continue;
+    }
+
+    x_old = x_new;
+    y_old = y_new;
+  
+    std::cout << "simple?: " << polygon.is_simple() << std::endl;
+    std::cout << "convex?: " << polygon.is_convex() << std::endl;
+  }
+
+  if(polygon.size() == 1 || polygon.size() == 2) {
+    polygon.clear();
+  }
+  std::cout << polygon << std::endl;
+
+  return polygon;
+}
+
 // stride through the slices and make a triangulation
 void make_2d_triangulation(const std::map<int,Polylines> slices) {
   // loop over the slices
@@ -119,6 +152,9 @@ void make_2d_triangulation(const std::map<int,Polylines> slices) {
   for ( std::pair<int,Polylines> boundary : slices ) {
     std::cout << "id: " << boundary.first;// << std::endl;
     std::cout << " size:" << boundary.second.size() << std::endl;
+
+    if(boundary.second.size() <= 1) continue; // dont want little artifacts
+   
     int id = boundary.first;
     //if ( id == 3 ) { break;}
     //if ( id != 2 ) { continue;}
@@ -129,29 +165,24 @@ void make_2d_triangulation(const std::map<int,Polylines> slices) {
 
     // for each closed loop in the boundary 
     for ( Polyline_type segments : boundary.second ) {
-      // for each point in a given loop
+            // for each point in a given loop
+      std::cout << segments.size() << std::endl;
+      // dont want only line segments
+      if ( segments.size() <= 2) continue;
+
       Polygon_2 polygon;
       //K2::Point_3 last_point;
-      double x_old,y_old = 0.0;
       segments.pop_back();
-      for ( K2::Point_3 point : segments ) {
-        double x_new = CGAL::to_double(point.x());
-        double y_new = CGAL::to_double(point.y());
-        //std::cout << x_new << " " << y_new << std::endl;
-        //std::cout << " segment " << std::endl;
-        if ( x_new != x_old || y_new != y_old ) {
-          polygon.push_back(Point(point.x(),point.y()));
-          //polygon.push_back(Point(x_new,y_old));
-          //cdt.insert(Point(point.x(),point.y()));
-        } 
-        x_old = x_new;
-        y_old = y_new;
-        //std::cout << polygon << std::endl;
-        std::cout << "simple?: " << polygon.is_simple() << std::endl;
-        std::cout << "convex?: " << polygon.is_convex() << std::endl;
-        //std::cout << x_old << " " << y_old << std::endl;
-//        last_point = point;
-      }
+      polygon = make_poly_from_segments(segments);
+
+      std::cout << polygon.is_simple() << " " << polygon.is_convex() << std::endl;
+      if(!polygon.is_simple()) continue;
+      if(polygon.is_convex()) continue;
+
+      // if polygon not simple dont add it
+      // all non degenerate polys should be 
+      // simple
+
       // due to the fact this this polygon could be 
       // convex we need to partition and then 
       // triangulate each partition
@@ -288,7 +319,7 @@ int main(int argc, char* argv[]) {
 
   std::map<int,Polylines> slices;
 
-  double dir[3] = {0.,0.,1.};
+  double dir[3] = {0.,1.,0.};
   slices = cgal->sliceGeometry(dir,slice_position[1]);
 
   make_2d_triangulation(slices);

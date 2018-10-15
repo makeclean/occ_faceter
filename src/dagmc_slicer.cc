@@ -103,7 +103,8 @@ std::map<int,Polylines> MOABInterface::sliceGeometry(double dir[3], double offse
     CGAL::Polygon_mesh_slicer<Mesh, K> slicer(it->second);
     Polylines slice;
     slicer(K::Plane_3(dir[0],dir[1],dir[2],offset), std::back_inserter(slice));
-    slices[it->first] = slice;
+    std::cout << it->first << " " << slice.size() << std::endl;
+    if ( slice.size() ) slices[it->first] = slice;
   }
   return slices;
 }

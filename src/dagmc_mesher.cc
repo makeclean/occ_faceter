@@ -460,21 +460,24 @@ class CGALMesher {
     //domain.detect_features();
     
     // Mesh criteria (no cell_size set)
-    Mesh_criteria criteria(facet_angle=25, facet_size=0.15, facet_distance=0.008,
-                           cell_radius_edge_ratio=3);
-  
+    //Mesh_criteria criteria(facet_angle=25, facet_size=0.15, facet_distance=0.008,
+    //                       cell_radius_edge_ratio=3);
+    Mesh_criteria criteria(cell_radius_edge_ratio=3,cell_size=0.3);
+    
     // Mesh generation
-    C3t3 c3t3 = CGAL::make_mesh_3<C3t3>(domain, criteria, no_perturb(), no_exude());
+    C3t3 c3t3 = CGAL::make_mesh_3<C3t3>(domain, criteria,
+					no_perturb(),
+					no_exude() );
+    
     // Mesh criteria (no cell_size set)
-
     moab::ErrorCode rval;
     
     // loop over 
     std::cout << c3t3.number_of_cells_in_complex() << std::endl;
     for( Cell_iterator cit = c3t3.cells_in_complex_begin();
          cit != c3t3.cells_in_complex_end();  ++cit) {
-          // loop over the vertices
-      std::vector<moab::EntityHandle>  entities(4);
+      // loop over the vertices
+      std::vector<moab::EntityHandle>  entities(4); // 4 verts for a tet
 
       for ( int i = 0 ; i < 4 ; i++ ) {
 	const Vertex_handle& vh = cit->vertex(i);

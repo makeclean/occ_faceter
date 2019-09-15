@@ -108,10 +108,10 @@ facet_data get_facets(TopoDS_Face currentFace, TopoDS_Edge currentEdge) {
   BRepMesh_IncrementalMesh facets;
   //  facets.SetControlSurfaceDeflection(false);
   #ifdef OCE_BUILD
-  facets.SetAngle(0.5);
-  facets.SetShape(currentFace);
-  facets.SetRelative(false);
-  facets.SetDeflection(1e-4f);
+    facets.SetAngle(0.5);
+    facets.SetShape(currentFace);
+    facets.SetRelative(false);
+    facets.SetDeflection(1e-4f);
   #endif
   #ifdef OCC_BUILD
     facets.theAngDeflection(0.5);

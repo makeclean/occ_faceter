@@ -1,3 +1,5 @@
+#define BOOST_PARAMETER_MAX_ARITY 12
+
 // moab includes
 #include "moab/Core.hpp"
 #include "MBTagConventions.hpp"

@@ -161,8 +161,7 @@ FaceterData get_triangulation(TopoDS_Face currentFace) {
     facets.theAngDeflection(0.5);
     facets.theShape(currentFace);
     facets.isRelative(false);
-    facets.theLinDeflection(1e-4f);
-
+    facets.theLinDeflection(facet_tol);
   #endif
   facets.Perform();
 

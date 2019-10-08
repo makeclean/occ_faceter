@@ -5,7 +5,7 @@ OCC Faceter is a coolection of tools used for the production, modification and s
 
 ### Installation
 
-OCC Faceter requires [CGAL](https://cgal.org/) and [OCE](https://github.com/tpaviot/oce) or [OCC](https://www.opencascade.com) to run
+OCC Faceter requires [CGAL](https://cgal.org/), [MOAB](https://press3.mcs.anl.gov/sigma/moab-library/) and [OCE](https://github.com/tpaviot/oce) or [OCC](https://www.opencascade.com) to run
 
 Install the dependencies and start using the tool.
 

@@ -46,15 +46,25 @@ struct FaceterData {
 //
 facet_data get_facets(TopoDS_Face currentFace) {
   TopLoc_Location loc;
-  BRepMesh_IncrementalMesh facets;
+  
   //  facets.SetControlSurfaceDeflection(false);
-  facets.SetAngle(0.5);
-  facets.SetShape(currentFace);
-  facets.SetRelative(false);
-  facets.SetDeflection(1e-3f);
-  facets.Perform();
+  #ifdef OCE_BUILD 
+    facets.SetAngle(0.5);
+    facets.SetShape(currentFace);
+    facets.SetRelative(false);
+    facets.SetDeflection(facet_tol);
+  #endif
 
-  facet_data facetData;
+  #ifdef OCC_BUILD
+    BRepMesh_IncrementalMesh facets(currentFace,facet_tol,false,0.5);
+    //facets.theAngDeflection(0.5);
+    //facets.theShape(currentFace);
+    //facets.isRelative(false);
+    //facets.theLinDeflection(1e-3f);
+  #endif
+    facets.Perform();
+    
+   facet_data facetData;
   
   Handle(Poly_Triangulation) triangles = BRep_Tool::Triangulation(currentFace,loc);
   if(triangles.IsNull()) {
@@ -96,13 +106,24 @@ facet_data get_facets(TopoDS_Face currentFace) {
 
 facet_data get_facets(TopoDS_Face currentFace, TopoDS_Edge currentEdge) {
   TopLoc_Location loc;
-  BRepMesh_IncrementalMesh facets;
+  //BRepMesh_IncrementalMesh facets;
   //  facets.SetControlSurfaceDeflection(false);
-  facets.SetAngle(0.5);
-  facets.SetShape(currentFace);
-  facets.SetRelative(false);
-  facets.SetDeflection(1e-4f);
+  #ifdef OCE_BUILD
+    facets.SetAngle(0.5);
+    facets.SetShape(currentFace);
+    facets.SetRelative(false);
+    facets.SetDeflection(1e-4f);
+  #endif
+  #ifdef OCC_BUILD
+    BRepMesh_IncrementalMesh facets(currentFace,facet_tol,false,0.5);
+    //facets.theAngDeflection(0.5);
+    //facets.theShape(currentFace);
+    //facets.isRelative(false);
+    //facets.theLinDeflection(1e-3f);
+  #endif
+ 
   facets.Perform();
+
 
   facet_data facetData;
   
@@ -130,12 +151,21 @@ void get_edges(TopoDS_Shape shape) {
 // get the triangulation for the current face
 FaceterData get_triangulation(TopoDS_Face currentFace) {
   TopLoc_Location loc;
-  BRepMesh_IncrementalMesh facets;
+  //BRepMesh_IncrementalMesh facets;
   //  facets.SetControlSurfaceDeflection(false);
-  facets.SetAngle(0.5);
-  facets.SetShape(currentFace);
+  #ifdef OCE_BUILD
+    facets.SetAngle(0.5);
+    facets.SetShape(currentFace);
   facets.SetRelative(false);
   facets.SetDeflection(facet_tol);
+  #endif
+  #ifdef OCC_BUILD
+    BRepMesh_IncrementalMesh facets(currentFace,facet_tol,false,0.5);
+    //facets.theAngDeflection(0.5);
+    //facets.theShape(currentFace);
+    //facets.isRelative(false);
+    //facets.theLinDeflection(1e-3f);
+  #endif
   facets.Perform();
 
   Handle(Poly_Triangulation) triangles = BRep_Tool::Triangulation(currentFace,loc);

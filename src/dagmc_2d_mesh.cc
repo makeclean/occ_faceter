@@ -20,7 +20,7 @@
 #include <CGAL/random_polygon_2.h>
 
 #include "CGAL/Polygon_2.h"
-#include "CGAL/draw_triangulation_2.h"
+//#include "CGAL/draw_triangulation_2.h"
 #include "CGAL/Delaunay_mesher_2.h"
 #include "CGAL/Delaunay_mesh_face_base_2.h"
 #include "CGAL/Delaunay_mesh_size_criteria_2.h"

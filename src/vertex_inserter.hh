@@ -1,9 +1,11 @@
+#ifndef VERTEX_INSERTER_HH
+#define VERTEX_INSERTER_HH 1
+
 #include "rtree/RTree.h"
 #include "moab/Types.hpp"
+#include "moab/Core.hpp"
+#include <array>
 #include <iostream>
-
-// global vector of hits
-std::vector<int> hits;
 
 // class to handle the insertion of vertices into moab such
 // that they are garenteed to be unique. Each point to be added
@@ -15,6 +17,9 @@ std::vector<int> hits;
 // Box struct to assist in the creation of the rtree. Boxes
 // store which moab entity handle they surround 
 //
+
+namespace VertexInserter {
+
 struct Box {
   // empty constuctor
   Box();
@@ -65,15 +70,19 @@ struct Box {
 
   // print the contents of the box
   void print() {
+    std::cout << std::scientific << std::endl;
+    std::cout << "boxboxboxboxbox" << std::endl;
+    std::cout << "center ";
     std::cout << centre.data()[0] << " ";
     std::cout << centre.data()[1] << " ";
     std::cout << centre.data()[2] << std::endl;
-    std::cout << min.data()[0] << " ";
+    std::cout << "min " << min.data()[0] << " ";
     std::cout << min.data()[1] << " ";
     std::cout << min.data()[2] << std::endl;
-    std::cout << max.data()[0] << " ";
+    std::cout << "max " << max.data()[0] << " ";
     std::cout << max.data()[1] << " ";
     std::cout << max.data()[2] << std::endl;
+    std::cout << "boxboxboxboxbox" << std::endl;
     return;
   }
   
@@ -87,7 +96,7 @@ struct Box {
 
 class VertexInserter {
   public:
-    VertexInserter(double tolerance = 1.0e-6);
+    VertexInserter(moab::Core *mbi, double tolerance = 1.0e-6);
    ~VertexInserter();
 
     // insert a vertex into the tree, if rval moab::entity_not_found
@@ -103,11 +112,18 @@ class VertexInserter {
     // returns moab::MB_FAILURE for everthing else
     moab::ErrorCode search_tree(const Box search_box,
 				moab::EntityHandle &hit);
+
+    // compare the coords stored in coord, with the true
+    // coordinates found in vert 
+    bool compare_vertex(const std::array<double,3> coord,
+			const moab::EntityHandle vert);
   
   private:
-    RTree<int,double,3,float> rtree; /// the rtree to check against 
+    moab::Core *mbi; // class does not own it should not delete
+    RTree::RTree<int,double,3,float> rtree; /// the rtree to check against 
     double box_tolerance; /// the insertion search tolerance
     int count; /// the number of boxes in the rtree
     std::vector<Box> boxes; // vector of boxes added
 };
-
+}
+#endif // VERTEX_INSERTER_HH

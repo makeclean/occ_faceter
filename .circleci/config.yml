@@ -2,13 +2,16 @@ version: 2
 jobs:
   build:
     docker:
-      - image: debian:stretch
+      - image: ubuntu:xenial
+#      - image: ubuntu:artful
+#      - image: ubuntu:bionic
+#      - image: ubuntu:cosmic
     steps:
       - checkout
       - run: apt-get update
       - run: apt-get install -y libcgal-dev liboce-foundation-dev cmake git
              libhdf5-dev libblas-dev liblapack-dev g++ gfortran autoconf
-             libtool build-essential
+             libtool build-essential libcgal-qt5-dev
       - run: git clone https://bitbucket.org/fathomteam/moab;
              cd moab;
              autoreconf -fi;
@@ -20,7 +23,12 @@ jobs:
              make install;
              cd ../..;
              rm -rf moab
-      - run: make MOAB_DIR=/opt/moab CGAL_DIR=/usr/ OCC_DIR=/usr/
+      - run: mkdir bld ;
+             cd bld ;
+             export LD_LIBRARY_PATH=/opt/moab/lib ;
+             cmake .. ;
+             make ;
+             make test
  
 #version: 2
 #jobs:

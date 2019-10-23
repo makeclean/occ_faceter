@@ -5,6 +5,7 @@
 #include <array>
 
 #include "rtree/RTree.h"
+#include "vertex_inserter.hh"
 
 // convenient return for facets
 struct facet_data {
@@ -42,7 +43,8 @@ private:
 						    facet_data facetData,
 						    std::vector<edge_data> edge_data);
   private:
-  moab::Core *mbi = NULL;
+  moab::Core *mbi;
+  VertexInserter::VertexInserter *vi;
   int volID;
   int surfID;
   int curveID;
@@ -50,7 +52,7 @@ private:
   moab::Tag geometry_dimension_tag, id_tag;
   moab::Tag faceting_tol_tag, geometry_resabs_tag;
   moab::Tag category_tag;
-
+  moab::Tag vol_id_tag, surf_id_tag; // tags for triangles for plotting
   moab::Range existing_vertices;
 
 };

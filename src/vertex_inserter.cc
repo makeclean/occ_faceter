@@ -1,20 +1,10 @@
 #include "vertex_inserter.hh"
 #include <iostream>
 
-int main(int argc, char* argv[]) {
-  VertexInserter *vi = new VertexInserter(1.e-4);
-  moab::EntityHandle eh = 0;
-  moab::ErrorCode rval = moab::MB_FAILURE;
-  rval = vi->insert_vertex({0,0,0},eh);
-  rval = vi->insert_vertex({0,1,0},eh);
-  rval = vi->insert_vertex({0,0,1},eh);
-  rval = vi->insert_vertex({0,0,0},eh);
-  rval = vi->insert_vertex({0,1,0},eh);
-  rval = vi->insert_vertex({0,0,1},eh);
-  rval = vi->insert_vertex({0,0,1.-1.e-5},eh);
-  delete vi;
-  return 0;
-}
+namespace VertexInserter {
+
+// global vector of hits
+std::vector<int> hits;
 
 bool callback(int id) {  
   hits.push_back(id);
@@ -22,7 +12,8 @@ bool callback(int id) {
 }
 
 // constructor
-VertexInserter::VertexInserter(double tolerance) {
+VertexInserter::VertexInserter(moab::Core *moab_ptr, double tolerance) {
+  mbi = moab_ptr;
   box_tolerance = tolerance;
   count = 0;
 }
@@ -33,7 +24,10 @@ VertexInserter::~VertexInserter() {
   rtree.RemoveAll();
 }
 
-// insert the given vertex into the moab database
+// insert the given vertex into the moab database - creates a new
+// vertex if it doesnt exist - otherwise returns (by arg) the handle
+// to the existing one - rval is ENTITY_NOT_FOUND if its new -
+// otherwise MB_SUCCESS if found - MB_FAILURE otherwise
 moab::ErrorCode VertexInserter::insert_vertex(std::array<double,3> point,
 					      moab::EntityHandle &handle) {
   // find any vertices that are 'close' to the point we
@@ -44,43 +38,61 @@ moab::ErrorCode VertexInserter::insert_vertex(std::array<double,3> point,
   // search the tree
   moab::EntityHandle eh = 0;
   moab::ErrorCode rval = search_tree(search,eh);
+
   if ( rval == moab::MB_ENTITY_NOT_FOUND ) { // vertex doesnt exist
     // make new vertex
-    rtree.Insert(search.min.data(),search.max.data(),count);
+    moab::ErrorCode ec = mbi->create_vertex(point.data(),eh);
+    MB_CHK_SET_ERR(ec,"Could not create vertex.");
     // set the eh
-    eh = count;
-    search.setHandle(eh);
-    count++;
+    search.setHandle(eh); // the curently existing search box belongs to this handle
     // keep it for later
     boxes.push_back(search);
-  } else if (rval == moab::MB_SUCCESS) { // vertex already exists
-    handle = eh;
-  } 
+    rtree.Insert(search.min.data(),search.max.data(),count);
+    count++;
+    //count++;
+  }
+  handle = eh; /// will be set to 0 under failure conditions
   return rval;
+}
+
+// compare the coords to the vertx pointed to, match = true not = false
+bool VertexInserter::compare_vertex(const std::array<double,3> coord,
+				    const moab::EntityHandle vert) {
+  double xyz[3]; // coords of the vertex
+  moab::ErrorCode rval = mbi->get_coords(&vert,1,&xyz[0]);
+
+  if ( coord.data()[0] == xyz[0] && coord.data()[1] == xyz[1] && coord.data()[2] == xyz[2] ) {
+    return true;
+  } 
+  return false;
 }
 
 // search the tree for the box
 moab::ErrorCode VertexInserter::search_tree(const Box search,
 					    moab::EntityHandle &hit) {
-  // 
+  //
   moab::EntityHandle rval = moab::MB_FAILURE;
   int nhits = 0;
   // search the tree
+  hits.clear();
   nhits = rtree.Search(search.min.data(),search.max.data(),callback);
   
   if ( !nhits ) {
-    std::cout << "no hit found" << std::endl;
     return moab::MB_ENTITY_NOT_FOUND;
    } else {
     // check the near hits for exactness
-    std::cout << nhits << " hits!" << std::endl;
     for ( int  i = 0 ; i < nhits ; i++ ) {
       moab::EntityHandle eh = boxes[hits[i]].getHandle();
-      std::cout << "hit box " << hits[i] << " with handle " << eh << std::endl;
+      if(compare_vertex(search.centre,eh)) {
+	hit = eh;
+	return moab::MB_SUCCESS;
+	hits.clear();
+      }
     }
     hits.clear();
-    return moab::MB_SUCCESS;
+    return moab::MB_ENTITY_NOT_FOUND;
   }
   return moab::MB_FAILURE;
 }
 
+}

@@ -43,6 +43,8 @@ typedef CGAL::Constrained_triangulation_face_base_2<K2,Fbb>        Fb;
 typedef CGAL::Triangulation_data_structure_2<Vb,Fb>               TDS;
 typedef CGAL::Exact_predicates_tag                                Itag;
 typedef CGAL::Constrained_Delaunay_triangulation_2<K2, TDS, Itag>  CDT;
+typedef CGAL::Delaunay_mesh_size_criteria_2<CDT>            Criteria;
+typedef CGAL::Delaunay_mesher_2<CDT, Criteria>              Mesher;
 
 //typedef CGAL::Polygon_2<K2> Polygon_2;
 typedef CGAL::Partition_traits_2<K2> Traits;
@@ -137,6 +139,77 @@ Polygon_2 make_poly_from_segments(const Polyline_type segments) {
 }
 
 // stride through the slices and make a triangulation
+void make_2d_triangulation_2(const std::map<int,Polylines> slices) {
+  // loop over the slices
+  //  std::vector<Polygon_2> polygons;
+
+  moab::Core *MOAB = new moab::Core();
+  VertexInserter::VertexInserter *vi = new VertexInserter::VertexInserter(MOAB);
+
+  moab::ErrorCode rval = moab::MB_FAILURE;
+  rval = MOAB->tag_get_handle("ID_TAG", 1, moab::MB_TYPE_INTEGER, idtag, moab::MB_TAG_SPARSE | moab::MB_TAG_CREAT);
+  MB_CHK_SET_ERR_RET(rval, "Couldnt get geom dim tag");
+  
+  // loop over the slices
+  for ( std::pair<int,Polylines> boundary : slices ) {
+    std::cout << "id: " << boundary.first;// << std::endl;
+    std::cout << " size:" << boundary.second.size() << std::endl;
+   
+    int id = boundary.first;
+    //if ( id == 3 ) { break;}
+    //if ( id != 2 ) { continue;}
+    std::cout << std::scientific;
+    std::cout << std::setprecision(18);// << std::endl;
+ 
+    CDT cdt;
+
+    std::map<std::string,Vertex_handle> vertices;
+    
+    // for each closed loop in the boundary 
+    for ( Polyline_type segments : boundary.second ) {
+      // for each point in a given loop
+      for ( K2::Point_3 point : segments ) {
+	double x_new = CGAL::to_double(point.x());
+	double y_new = CGAL::to_double(point.z());
+	std::string hash = std::to_string(x_new)+std::to_string(y_new);
+	// build the vertex map
+	if ( !vertices.count(hash)) {
+	  Vertex_handle a = cdt.insert(Point(x_new,y_new));
+	  vertices[hash] = a;
+	}
+      }
+    }
+    // now have the unique vertices that make up the boundary
+
+    // for each closed loop in the boundary now add the boundaries
+    // to the cdt
+    for ( Polyline_type segments : boundary.second ) {
+      std::cout << segments.size() << std::endl;
+
+      for ( int i = 0 ; i < segments.size() - 1 ; i++ ) {
+	double x1 = CGAL::to_double(segments[i].x());
+	double y1 = CGAL::to_double(segments[i].z());
+	std::string hash1 = std::to_string(x1) + std::to_string(y1);
+
+      	double x2 = CGAL::to_double(segments[i+1].x());
+	double y2 = CGAL::to_double(segments[i+1].z());
+	std::string hash2 = std::to_string(x2) + std::to_string(y2);
+
+	Vertex_handle v1 = vertices[hash1];
+	Vertex_handle v2 = vertices[hash2];
+
+	cdt.insert_constraint(v1,v2);
+      }
+    }
+    
+    //
+    Mesher mesher(cdt);
+    mesher.set_criteria(Criteria(0.125, 0.05));
+    mesher.refine_mesh();
+  }
+}
+
+// stride through the slices and make a triangulation
 void make_2d_triangulation(const std::map<int,Polylines> slices) {
   // loop over the slices
   //  std::vector<Polygon_2> polygons;
@@ -152,8 +225,6 @@ void make_2d_triangulation(const std::map<int,Polylines> slices) {
   for ( std::pair<int,Polylines> boundary : slices ) {
     std::cout << "id: " << boundary.first;// << std::endl;
     std::cout << " size:" << boundary.second.size() << std::endl;
-
-    if(boundary.second.size() <= 1) continue; // dont want little artifacts
    
     int id = boundary.first;
     //if ( id == 3 ) { break;}
@@ -165,17 +236,16 @@ void make_2d_triangulation(const std::map<int,Polylines> slices) {
 
     // for each closed loop in the boundary 
     for ( Polyline_type segments : boundary.second ) {
-            // for each point in a given loop
-      std::cout << segments.size() << std::endl;
+      // for each point in a given loop
+      std::cout << "number of segments: " << segments.size() << std::endl;
       // dont want only line segments
-      if ( segments.size() <= 2) continue;
+      if ( segments.size() <= 1) continue;
 
       Polygon_2 polygon;
-      //K2::Point_3 last_point;
       segments.pop_back();
       polygon = make_poly_from_segments(segments);
 
-      std::cout << polygon.is_simple() << " " << polygon.is_convex() << std::endl;
+      std::cout << "simple? " << polygon.is_simple() << " convex?" << polygon.is_convex() << std::endl;
       if(!polygon.is_simple()) continue;
       if(polygon.is_convex()) continue;
 
@@ -200,7 +270,7 @@ void make_2d_triangulation(const std::map<int,Polylines> slices) {
                                        std::back_inserter(poly_parts),
                                        partition_traits);
                                        */
-      std::cout << poly_parts.size() << std::endl;
+      std::cout << "partition: " << poly_parts.size() << std::endl;
       //std::cout << polygon << std::endl;
       // append the polygon to the vector
       //polygons.push_back(polygon);    
@@ -237,7 +307,9 @@ void make_2d_triangulation(const std::map<int,Polylines> slices) {
 
           double x = CGAL::to_double(t->vertex(i)->point().hx());
           double y = CGAL::to_double(t->vertex(i)->point().hy());
-        
+
+	  std::cout << x << " " << y << std::endl;
+	  
           std::array<double,3> coords = {x,y,0.0};
           // make new moab vertex
           rval = vi->insert_vertex(coords,connectivity[i]);
@@ -320,9 +392,9 @@ int main(int argc, char* argv[]) {
   std::map<int,Polylines> slices;
 
   double dir[3] = {0.,1.,0.};
-  slices = cgal->sliceGeometry(dir,slice_position[1]);
+  slices = cgal->sliceGeometryByID(dir,slice_position[1]);
 
-  make_2d_triangulation(slices);
+  make_2d_triangulation_2(slices);
   
   return 0;
 

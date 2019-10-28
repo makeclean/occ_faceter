@@ -5,17 +5,16 @@
 
 #include <fstream>
 #include "boost/program_options.hpp"
-
 #include "CGAL/Polygon_mesh_slicer.h"
 
 //
-void writeSlice(std::map<int,Polylines> slices, std::string filename) {
-    std::map<int,Polylines>::iterator slice_it;
+void writeSlice(std::vector<Polylines> slices, std::string filename) {
+    std::vector<Polylines>::iterator slice_it;
     std::ofstream outfile(filename);      
     for ( slice_it = slices.begin() ; slice_it != slices.end() ; ++slice_it) {
       Polylines::iterator it;
       Polyline_type::iterator jt;
-      for ( it = slice_it->second.begin() ; it != slice_it->second.end() ; ++it) {
+      for ( it = slice_it->begin() ; it != slice_it->end() ; ++it) {
 	for ( jt = it->begin() ; jt != it->end() ; ++jt ) {
 	  outfile << (*jt).x() << " " <<  (*jt).y() << " " << (*jt).z() << std::endl;
 	}
@@ -85,7 +84,7 @@ int main(int argc, char* argv[]) {
   MOABInterface *cgal = new MOABInterface(MBI);
   cgal->makeCGALGeometry(); 
 
-  std::map<int,Polylines> slices;
+  std::vector<Polylines> slices;
 
   double dir[3] = {0.,1.,0.};
   slices = cgal->sliceGeometry(dir,slice_position[1]);

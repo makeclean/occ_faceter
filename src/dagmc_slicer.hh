@@ -10,6 +10,10 @@
 #include "CGAL/AABB_traits.h"
 #include "CGAL/Polygon_mesh_slicer.h"
 
+#include <CGAL/Polygon_mesh_processing/orient_polygon_soup.h>
+#include <CGAL/Polygon_mesh_processing/polygon_soup_to_polygon_mesh.h>
+#include <CGAL/Polygon_mesh_processing/orientation.h>
+
 #ifndef DAGMC_SLICER_HH 
 #define DAGMC_SLICER_HH 1
 
@@ -32,7 +36,8 @@ class MOABInterface {
   void getVolumeIDList();
   moab::Range getChildTriangles(int vol_id);
   Mesh getCGALMesh(int vol_id);
-  std::map<int,Polylines> sliceGeometry(double dir[3], double offset);
+  std::vector<Polylines> sliceGeometry(double dir[3], double offset);
+  std::map<int,Polylines> sliceGeometryByID(double dir[3], double offset);
   void makeCGALGeometry();
   Mesh makeCGALMesh(moab::Range triangles);
   

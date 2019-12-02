@@ -1,7 +1,7 @@
 #include <iostream>
 #include <array>
 
-//#include "BRep_Tool.hxx"
+#include "BRep_Tool.hxx"
 #include "BRepMesh_IncrementalMesh.hxx"
 #include "Poly_Array1OfTriangle.hxx"
 #include "TColgp_Array1OfPnt.hxx"
@@ -16,6 +16,7 @@
 #include "TopoDS.hxx"
 #include "TopoDS_Shape.hxx"
 #include "TopoDS_Face.hxx"
+#include "TopoDS_Edge.hxx"
 
 #include "TopTools_HSequenceOfShape.hxx"
 #include "TopTools_IndexedMapOfShape.hxx"
@@ -48,21 +49,12 @@ facet_data get_facets(TopoDS_Face currentFace) {
   TopLoc_Location loc;
   
   //  facets.SetControlSurfaceDeflection(false);
-  #ifdef OCE_BUILD 
-    facets.SetAngle(0.5);
-    facets.SetShape(currentFace);
-    facets.SetRelative(false);
-    facets.SetDeflection(facet_tol);
-  #endif
-
-  #ifdef OCC_BUILD
-    BRepMesh_IncrementalMesh facets(currentFace,facet_tol,false,0.5);
+   BRepMesh_IncrementalMesh facets(currentFace,facet_tol,false,0.5);
     //facets.theAngDeflection(0.5);
     //facets.theShape(currentFace);
     //facets.isRelative(false);
     //facets.theLinDeflection(1e-3f);
-  #endif
-    facets.Perform();
+   facets.Perform();
     
    facet_data facetData;
   
@@ -250,7 +242,10 @@ edge_data make_edge_facets(TopoDS_Face currentFace, TopoDS_Edge currentEdge, Fac
 void get_facets_for_shape(TopoDS_Shape shape) {
   int j = 0;
   moab::EntityHandle vol;
+
+  //#pragma omp critical
   moab::ErrorCode rval = mbtool->make_new_volume(vol);
+  
   for( TopExp_Explorer ex(shape, TopAbs_FACE); ex.More(); ex.Next() ) {
     TopoDS_Face currentFace = TopoDS::Face( ex.Current());
     //facet_data facets = get_facets(currentFace);
@@ -271,6 +266,7 @@ void get_facets_for_shape(TopoDS_Shape shape) {
     }
     //std::cout << edge_collection.size() << std::endl;
     //mbtool->add_surface(vol,facets);//,edge_collection);
+    //#pragma omp critical
     mbtool->add_surface(vol,facets,edge_collection);
     //std::cout << j << " " << edges.Extent() << std::endl;
   }
@@ -280,6 +276,7 @@ void get_facets_for_shape(TopoDS_Shape shape) {
 // facet all the volumes
 void facet_all_volumes(Handle_TopTools_HSequenceOfShape shape_list){
   int count = shape_list->Length();
+  //#pragma omp parallel for 
   for ( int i = 1 ; i <= count ; i++ ) {
     TopoDS_Shape shape = shape_list->Value(i);
     get_facets_for_shape(shape); // get the edges and 

@@ -1,5 +1,6 @@
 #include <iostream>
 #include <array>
+#include <omp.h>
 
 #include "BRep_Tool.hxx"
 #include "BRepMesh_IncrementalMesh.hxx"
@@ -237,49 +238,62 @@ edge_data make_edge_facets(TopoDS_Face currentFace, TopoDS_Edge currentEdge, Fac
   }
 }
 
+struct surface_data {
+  facet_data facets;
+  std::vector<edge_data> edge_collection;
+};
+
 // for a given shape - get the faces and edges
 // then facet the face and also extract edges
-void get_facets_for_shape(TopoDS_Shape shape) {
+std::vector<surface_data> get_facets_for_shape(TopoDS_Shape shape, moab::EntityHandle vol) {
   int j = 0;
-  moab::EntityHandle vol;
-
-  //#pragma omp critical
-  moab::ErrorCode rval = mbtool->make_new_volume(vol);
-  
+  std::vector<surface_data> surfaces;
+ 
   for( TopExp_Explorer ex(shape, TopAbs_FACE); ex.More(); ex.Next() ) {
+    surface_data surface;
     TopoDS_Face currentFace = TopoDS::Face( ex.Current());
     //facet_data facets = get_facets(currentFace);
     // get the triangulation for the current face
     FaceterData data = get_triangulation(currentFace);
     // make facets for current face
-    facet_data facets = make_surface_facets(currentFace,data);
+    surface.facets = make_surface_facets(currentFace,data);
     
     TopTools_IndexedMapOfShape edges;
     TopExp::MapShapes(currentFace,TopAbs_EDGE,edges);
-    std::vector<edge_data> edge_collection;
     for ( int i = 1 ; i<=edges.Extent() ; i++ ) {
       TopoDS_Edge currentEdge = TopoDS::Edge(edges(i));
       // make the edge facets
       edge_data edges = make_edge_facets(currentFace,currentEdge,data);
-      edge_collection.push_back(edges);
+      surface.edge_collection.push_back(edges);
       //    std::cout << j << " " <<  i << std::endl;
     }
     //std::cout << edge_collection.size() << std::endl;
     //mbtool->add_surface(vol,facets);//,edge_collection);
-    //#pragma omp critical
-    mbtool->add_surface(vol,facets,edge_collection);
+    surfaces.push_back(surface);
     //std::cout << j << " " << edges.Extent() << std::endl;
   }
-  return;
+
+  return surfaces;
 }
 
 // facet all the volumes
 void facet_all_volumes(Handle_TopTools_HSequenceOfShape shape_list){
   int count = shape_list->Length();
-  //#pragma omp parallel for 
+
+  std::vector<moab::EntityHandle> vols(count);
+  for ( int i = 0 ; i < count ; i++ ) {
+    mbtool->make_new_volume(vols.at(i));
+  }
+
+#pragma omp parallel for num_threads(4)
   for ( int i = 1 ; i <= count ; i++ ) {
     TopoDS_Shape shape = shape_list->Value(i);
-    get_facets_for_shape(shape); // get the edges and 
+    std::vector<surface_data> surfaces = get_facets_for_shape(shape, vols.at(i-1));
+
+#pragma omp critical
+    for (const surface_data& surface : surfaces)
+      mbtool->add_surface(vols.at(i-1),surface.facets,surface.edge_collection);
+
     //get_faces(shape);
     //get_edges(shape);
   }
@@ -308,7 +322,7 @@ void dump_labels() {
 }
 
 void sew_and_append(TopoDS_Shape shape, Handle(TopTools_HSequenceOfShape) &shape_list) {
-  std::cout << "shape type: " << shape.ShapeType() << std::endl;
+  // std::cout << "shape type: " << shape.ShapeType() << std::endl;
   // sew together all the curves
   BRepOffsetAPI_Sewing(1.0e-06, Standard_True);
   BRepOffsetAPI_Sewing sew;

@@ -285,7 +285,7 @@ void facet_all_volumes(Handle_TopTools_HSequenceOfShape shape_list){
     mbtool->make_new_volume(vols.at(i));
   }
 
-#pragma omp parallel for num_threads(4)
+#pragma omp parallel for
   for ( int i = 1 ; i <= count ; i++ ) {
     TopoDS_Shape shape = shape_list->Value(i);
     std::vector<surface_data> surfaces = get_facets_for_shape(shape, vols.at(i-1));

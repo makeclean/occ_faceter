@@ -11,7 +11,6 @@
 #include "Poly_PolygonOnTriangulation.hxx"
 
 #include "Interface_Static.hxx"
-//#include "IFSelect_PrintCount.hxx"
 #include "STEPControl_Reader.hxx"
 
 #include "TopoDS.hxx"
@@ -24,7 +23,6 @@
 #include "TopExp_Explorer.hxx"
 #include "TopExp.hxx"
 
-//#include "TopLoc_TrsfPtr.hxx"
 #include "TopLoc_Location.hxx"
 
 #include "BRepOffsetAPI_Sewing.hxx"
@@ -45,118 +43,10 @@ struct FaceterData {
   Handle(Poly_Triangulation) triangulation;
 };
 
-//
-facet_data get_facets(TopoDS_Face currentFace) {
-  TopLoc_Location loc;
-
-  //  facets.SetControlSurfaceDeflection(false);
-  BRepMesh_IncrementalMesh facets(currentFace, facet_tol, false, 0.5);
-  //facets.theAngDeflection(0.5);
-  //facets.theShape(currentFace);
-  //facets.isRelative(false);
-  //facets.theLinDeflection(1e-3f);
-  facets.Perform();
-
-  facet_data facetData;
-
-  Handle(Poly_Triangulation) triangles = BRep_Tool::Triangulation(currentFace, loc);
-  if (triangles.IsNull()) {
-    std::cout << "No facets for surface" << std::endl;
-    return facetData;
-  } else {
-    // retrieve facet data
-
-    gp_Trsf local_transform = loc;
-    const TColgp_Array1OfPnt &nodes = triangles->Nodes();
-    for (int i = nodes.Lower(); i <= nodes.Upper(); i++) {
-      Standard_Real x, y, z;
-      nodes(i).Coord(x, y, z);
-      local_transform.Transforms(x, y, z);
-      std::array<double, 3> coordinates;
-      coordinates[0] = x, coordinates[1] = y, coordinates[2] = z;
-      facetData.coords.push_back(coordinates);
-      //std::cout << i << " " << x << " " << y << " " << z << std::endl;
-    }
-    // copy the facet_data
-    std::array<int, 3> conn;
-    const Poly_Array1OfTriangle &tris = triangles->Triangles();
-    std::cout << "Face has " << tris.Length() << " triangles" << std::endl;
-    for (int i = tris.Lower(); i <= tris.Upper(); i++) {
-      // get the node indexes for this triangle
-      Poly_Triangle tri = tris(i);
-
-      // reverse the triangle orientation if the face is reversed
-      if (currentFace.Orientation() != TopAbs_FORWARD)
-        tri.Get(conn[2], conn[1], conn[0]);
-      else
-        tri.Get(conn[0], conn[1], conn[2]);
-
-      facetData.connectivity.push_back(conn);
-    }
-    return facetData;
-  }
-}
-
-facet_data get_facets(TopoDS_Face currentFace, TopoDS_Edge currentEdge) {
-  TopLoc_Location loc;
-//BRepMesh_IncrementalMesh facets;
-//  facets.SetControlSurfaceDeflection(false);
-#ifdef OCE_BUILD
-  facets.SetAngle(0.5);
-  facets.SetShape(currentFace);
-  facets.SetRelative(false);
-  facets.SetDeflection(1e-4f);
-#endif
-#ifdef OCC_BUILD
-  BRepMesh_IncrementalMesh facets(currentFace, facet_tol, false, 0.5);
-  //facets.theAngDeflection(0.5);
-  //facets.theShape(currentFace);
-  //facets.isRelative(false);
-  //facets.theLinDeflection(1e-3f);
-#endif
-
-  facets.Perform();
-
-  facet_data facetData;
-
-  Handle(Poly_Triangulation) triangles = BRep_Tool::Triangulation(currentFace, loc);
-  Handle(Poly_PolygonOnTriangulation) edges = BRep_Tool::PolygonOnTriangulation(currentEdge, triangles, loc);
-  return facetData;
-}
-
-// get all the curves of a given shape
-void get_edges(TopoDS_Shape shape) {
-  TopTools_IndexedMapOfShape edges;
-  TopExp::MapShapes(shape, TopAbs_EDGE, edges);
-  for (int i = 1; i <= edges.Extent(); i++) {
-    TopoDS_Edge currentEdge = TopoDS::Edge(edges(i));
-    //    facet_data facets = get_facets(currentEdge);
-    //   std::cout << i << std::endl;
-  }
-  //for ( TopExp_Explorer ex(shape, TopAbs_EDGE) ; ex.More() ; ex.Next() ) {
-  //  TopoDS_Edge currentEdge = TopoDS::Edge(ex.Current());
-  //    facet_data facets = get_facets(currentEdge);
-  return;
-}
-
 // get the triangulation for the current face
 FaceterData get_triangulation(TopoDS_Face currentFace) {
   TopLoc_Location loc;
-//BRepMesh_IncrementalMesh facets;
-//  facets.SetControlSurfaceDeflection(false);
-#ifdef OCE_BUILD
-  facets.SetAngle(0.5);
-  facets.SetShape(currentFace);
-  facets.SetRelative(false);
-  facets.SetDeflection(facet_tol);
-#endif
-#ifdef OCC_BUILD
   BRepMesh_IncrementalMesh facets(currentFace, facet_tol, false, 0.5);
-  //facets.theAngDeflection(0.5);
-  //facets.theShape(currentFace);
-  //facets.isRelative(false);
-  //facets.theLinDeflection(1e-3f);
-#endif
   facets.Perform();
 
   Handle(Poly_Triangulation) triangles = BRep_Tool::Triangulation(currentFace, loc);
@@ -187,7 +77,6 @@ facet_data make_surface_facets(TopoDS_Face currentFace, FaceterData facetData) {
       std::array<double, 3> coordinates;
       coordinates[0] = x, coordinates[1] = y, coordinates[2] = z;
       facets_for_moab.coords.push_back(coordinates);
-      //std::cout << i << " " << x << " " << y << " " << z << std::endl;
     }
     // copy the facet_data
     std::array<int, 3> conn;
@@ -225,9 +114,7 @@ edge_data make_edge_facets(TopoDS_Face currentFace, TopoDS_Edge currentEdge, Fac
   } else {
     // retrieve facet data
     std::vector<int> conn;
-    //TColStd_Array1OfInteger
     const TColStd_Array1OfInteger &lines = edges->Nodes();
-    //std::cout << "Edge has " << lines.Length() << " length" <<  std::endl;
     for (int i = lines.Lower(); i <= lines.Upper(); i++) {
       conn.push_back(lines(i));
     }
@@ -250,7 +137,6 @@ std::vector<surface_data> get_facets_for_shape(TopoDS_Shape shape, moab::EntityH
   for (TopExp_Explorer ex(shape, TopAbs_FACE); ex.More(); ex.Next()) {
     surface_data surface;
     TopoDS_Face currentFace = TopoDS::Face(ex.Current());
-    //facet_data facets = get_facets(currentFace);
     // get the triangulation for the current face
     FaceterData data = get_triangulation(currentFace);
     // make facets for current face
@@ -263,12 +149,8 @@ std::vector<surface_data> get_facets_for_shape(TopoDS_Shape shape, moab::EntityH
       // make the edge facets
       edge_data edges = make_edge_facets(currentFace, currentEdge, data);
       surface.edge_collection.push_back(edges);
-      //    std::cout << j << " " <<  i << std::endl;
     }
-    //std::cout << edge_collection.size() << std::endl;
-    //mbtool->add_surface(vol,facets);//,edge_collection);
     surfaces.push_back(surface);
-    //std::cout << j << " " << edges.Extent() << std::endl;
   }
 
   return surfaces;
@@ -291,9 +173,6 @@ void facet_all_volumes(Handle_TopTools_HSequenceOfShape shape_list) {
 #pragma omp critical
     for (const surface_data &surface : surfaces)
       mbtool->add_surface(vols.at(i - 1), surface.facets, surface.edge_collection);
-
-    //get_faces(shape);
-    //get_edges(shape);
   }
   return;
 }
@@ -318,7 +197,6 @@ void dump_labels() {
 }
 
 void sew_and_append(TopoDS_Shape shape, Handle(TopTools_HSequenceOfShape) & shape_list) {
-  // std::cout << "shape type: " << shape.ShapeType() << std::endl;
   // sew together all the curves
   BRepOffsetAPI_Sewing(1.0e-06, Standard_True);
   BRepOffsetAPI_Sewing sew;
@@ -338,16 +216,9 @@ int main(int argc, char *argv[]) {
 
   moab::ErrorCode rval = mbtool->set_tags();
 
-  //Interface_Static::SetIVal("read.step.product.mode",0);
-  //Interface_Static::SetIVal("read.step.product.context",2);
-  //Interface_Static::SetIVal("read.step.assembly.level",4);
-
   step = new STEPControl_Reader();
   step->ReadFile(cad_file.c_str());
 
-  //step->PrintCheckLoad(false,IFSelect_GeneralInfo);
-  //step->PrintCheckLoad(false,IFSelect_ItemsByEntity);
-  //step->PrintCheckLoad(false,IFSelect_CountByItem);
   step->PrintCheckLoad(false, IFSelect_ListByItem);
   step->ClearShapes();
   int count = step->NbRootsForTransfer();

@@ -46,9 +46,6 @@ struct FaceterData {
 // get the triangulation for the current face
 FaceterData get_triangulation(TopoDS_Face currentFace) {
   TopLoc_Location loc;
-  BRepMesh_IncrementalMesh facets(currentFace, facet_tol, false, 0.5);
-  facets.Perform();
-
   Handle(Poly_Triangulation) triangles = BRep_Tool::Triangulation(currentFace, loc);
   FaceterData data;
   data.loc = loc;
@@ -165,12 +162,22 @@ void facet_all_volumes(Handle_TopTools_HSequenceOfShape shape_list) {
     mbtool->make_new_volume(vols.at(i));
   }
 
+// Use BRepMesh_IncrementalMesh to make the triangulation
 #pragma omp parallel for
+  for (int i = 1; i <= count; i++) {
+    TopoDS_Shape shape = shape_list->Value(i);
+    for (TopExp_Explorer ex(shape, TopAbs_FACE); ex.More(); ex.Next()) {
+      TopoDS_Face face = TopoDS::Face(ex.Current());
+
+      // This constructor calls Perform()
+      BRepMesh_IncrementalMesh facets(face, facet_tol, false, 0.5);
+    }
+  }
+
   for (int i = 1; i <= count; i++) {
     TopoDS_Shape shape = shape_list->Value(i);
     std::vector<surface_data> surfaces = get_facets_for_shape(shape, vols.at(i - 1));
 
-#pragma omp critical
     for (const surface_data &surface : surfaces)
       mbtool->add_surface(vols.at(i - 1), surface.facets, surface.edge_collection);
   }

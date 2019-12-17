@@ -2,6 +2,8 @@
 #include <iostream>
 #include <cstring>
 
+#include "moab/GeomTopoTool.hpp"
+
 const char geom_categories[][CATEGORY_TAG_SIZE] = {"Vertex\0",
 						   "Curve\0",
 						   "Surface\0",
@@ -12,6 +14,7 @@ const char geom_categories[][CATEGORY_TAG_SIZE] = {"Vertex\0",
 // default constructor
 MBTool::MBTool() {
     mbi = new moab::Core();
+    geom_tool = new moab::GeomTopoTool(mbi);
 
     // new vertex inserter
     vi = new VertexInserter::VertexInserter(mbi,1.e-6); // should pass the
@@ -49,6 +52,7 @@ MBTool::MBTool() {
 // destructor
 MBTool::~MBTool() {
     delete mbi;
+    delete geom_tool;
     delete vi;
 }
 
@@ -88,6 +92,15 @@ moab::ErrorCode MBTool::add_surface(moab::EntityHandle volume,
   rval = make_new_surface(surface);
   rval = add_facets_and_curves_to_surface(surface,facetData,edges);
   rval = mbi->add_parent_child(volume,surface);
+  return rval;
+}
+
+moab::ErrorCode MBTool::add_surface_to_volume(moab::EntityHandle surface,
+          moab::EntityHandle volume, int sense) {
+  moab::ErrorCode rval;
+  rval = mbi->add_parent_child(volume, surface);
+  MB_CHK_ERR(rval);
+  rval = geom_tool->set_sense(surface, volume, sense);
   return rval;
 }
 

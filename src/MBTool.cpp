@@ -11,7 +11,7 @@ const char geom_categories[][CATEGORY_TAG_SIZE] = {"Vertex\0",
 
 // default constructor
 MBTool::MBTool() {
-    if(mbi == NULL) mbi = new moab::Core();
+    mbi = new moab::Core();
 
     // new vertex inserter
     vi = new VertexInserter::VertexInserter(mbi,1.e-6); // should pass the

@@ -205,25 +205,21 @@ void facet_all_volumes(const TopTools_HSequenceOfShape& shape_list) {
   }
 }
 
-void sew_and_append(TopoDS_Shape shape, TopTools_HSequenceOfShape& shape_list) {
-  // sew together all the curves
-  BRepOffsetAPI_Sewing(1.0e-06, Standard_True);
-  BRepOffsetAPI_Sewing sew;
-  sew.Add(shape);
-  sew.Perform();
-  shape = sew.SewedShape();
-  shape_list.Append(shape);
-}
-
-void sew_shapes(const TopoDS_Shape& shape, TopTools_HSequenceOfShape& shape_list) {
+void sew_shapes(const TopoDS_Shape& shape, TopTools_HSequenceOfShape& sewed_shapes) {
   if (shape.ShapeType() == TopAbs_COMPOUND) {
     // decend and get children
     for (TopoDS_Iterator it = TopoDS_Iterator(shape); it.More(); it.Next()) {
-      sew_shapes(it.Value(), shape_list);
+      sew_shapes(it.Value(), sewed_shapes);
     }
   } else if (shape.ShapeType() == TopAbs_SOLID) {
+    // sew together all the curves
+    BRepOffsetAPI_Sewing(1.0e-06, Standard_True);
+    BRepOffsetAPI_Sewing sew;
+    sew.Add(shape);
+    sew.Perform();
+
     // insert into the list
-    sew_and_append(shape, shape_list);
+    sewed_shapes.Append(sew.SewedShape());
   } else {
     std::cout << "Unknown shape type " << shape.ShapeType() << std::endl;
   }

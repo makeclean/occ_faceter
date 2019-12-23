@@ -207,19 +207,22 @@ void sew_shapes(const TopoDS_Shape &shape, TopTools_HSequenceOfShape &sewed_shap
   }
 }
 
+void sew_and_facet(TopoDS_Shape &shape, float facet_tol, MBTool &mbtool) {
+  TopTools_HSequenceOfShape shape_list;
+  sew_shapes(shape, shape_list);
+  std::cout << "Instanciated " << shape_list.Length() << " items from file" << std::endl;
+
+  facet_all_volumes(shape_list, facet_tol, mbtool);
+}
+
 void dagmc_faceter(std::string brep_file, float facet_tol, std::string h5m_file) {
   TopoDS_Shape shape;
   BRep_Builder builder;
   BRepTools::Read(shape, brep_file.c_str(), builder);
 
-  TopTools_HSequenceOfShape shape_list;
-  sew_shapes(shape, shape_list);
-
-  std::cout << "Instanciated " << shape_list.Length() << " items from file" << std::endl;
-
   MBTool mbtool;
   mbtool.set_tags();
-  facet_all_volumes(shape_list, facet_tol, mbtool);
+  sew_and_facet(shape, facet_tol, mbtool);
   mbtool.write_geometry(h5m_file.c_str());
 }
 

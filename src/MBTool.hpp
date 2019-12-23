@@ -1,3 +1,6 @@
+#ifndef MBTOOL_HPP
+#define MBTOOL_HPP
+
 #include "moab/Core.hpp"
 #include "MBTagConventions.hpp"
 
@@ -63,3 +66,4 @@ private:
   moab::Range existing_vertices;
 
 };
+#endif // MBTOOL_HPP

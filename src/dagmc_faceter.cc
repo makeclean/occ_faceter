@@ -132,7 +132,7 @@ void perform_faceting(const TopoDS_Face &face, float facet_tol) {
 }
 
 void facet_all_volumes(const TopTools_HSequenceOfShape &shape_list,
-                       float facet_tol, MBTool *mbtool) {
+                       float facet_tol, MBTool &mbtool) {
   int count = shape_list.Length();
 
   std::vector<TopoDS_Face> uniqueFaces;
@@ -150,7 +150,7 @@ void facet_all_volumes(const TopTools_HSequenceOfShape &shape_list,
 
       uniqueFaces.push_back(face);
       moab::EntityHandle surface;
-      mbtool->make_new_surface(surface);
+      mbtool.make_new_surface(surface);
       surfaceMap.Add(face, surface);
     }
   }
@@ -167,7 +167,7 @@ void facet_all_volumes(const TopTools_HSequenceOfShape &shape_list,
     const TopoDS_Face &face = it.Key();
     moab::EntityHandle surface = it.Value();
     surface_data data = get_facets_for_face(face);
-    mbtool->add_facets_and_curves_to_surface(surface, data.facets, data.edge_collection);
+    mbtool.add_facets_and_curves_to_surface(surface, data.facets, data.edge_collection);
   }
 
   // create volumes and add surfaces
@@ -175,13 +175,13 @@ void facet_all_volumes(const TopTools_HSequenceOfShape &shape_list,
     const TopoDS_Shape &shape = shape_list.Value(i);
 
     moab::EntityHandle vol;
-    mbtool->make_new_volume(vol);
+    mbtool.make_new_volume(vol);
 
     for (TopExp_Explorer ex(shape, TopAbs_FACE); ex.More(); ex.Next()) {
       const TopoDS_Face &face = TopoDS::Face(ex.Current());
       moab::EntityHandle surface = surfaceMap.FindFromKey(face);
       int sense = face.Orientation() == TopAbs_REVERSED ? moab::SENSE_REVERSE : moab::SENSE_FORWARD;
-      mbtool->add_surface_to_volume(surface, vol, sense);
+      mbtool.add_surface_to_volume(surface, vol, sense);
     }
   }
 }
@@ -221,12 +221,9 @@ int main(int argc, char *argv[]) {
 
   std::cout << "Instanciated " << shape_list.Length() << " items from file" << std::endl;
 
-  MBTool *mbtool = new MBTool();
-  moab::ErrorCode rval = mbtool->set_tags();
-
+  MBTool mbtool;
+  mbtool.set_tags();
   facet_all_volumes(shape_list, facet_tol, mbtool);
-
-  mbtool->write_geometry(filename.c_str());
-  delete mbtool;
+  mbtool.write_geometry(filename.c_str());
   return 0;
 }

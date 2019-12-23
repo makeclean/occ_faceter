@@ -27,11 +27,6 @@
 
 #include "BRepOffsetAPI_Sewing.hxx"
 
-#include "XSControl_WorkSession.hxx"
-#include "Interface_InterfaceModel.hxx"
-#include "StepRepr_Representation.hxx"
-#include "TCollection_HAsciiString.hxx"
-
 #include "MBTool.hpp"
 
 #include "BRepTools.hxx"

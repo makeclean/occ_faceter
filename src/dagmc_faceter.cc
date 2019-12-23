@@ -40,19 +40,12 @@
 
 typedef NCollection_IndexedDataMap<TopoDS_Face, moab::EntityHandle, TopTools_ShapeMapHasher> MapFaceToSurface;
 
-struct FaceterData {
+struct TriangulationWithLocation {
   TopLoc_Location loc;
   Handle(Poly_Triangulation) triangulation;
 };
 
-// get the triangulation for the current face
-FaceterData get_triangulation(const TopoDS_Face &currentFace) {
-  FaceterData data;
-  data.triangulation = BRep_Tool::Triangulation(currentFace, data.loc);
-  return data;
-}
-
-facet_data make_surface_facets(const TopoDS_Face &currentFace, const FaceterData &facetData) {
+facet_data make_surface_facets(const TopoDS_Face &currentFace, const TriangulationWithLocation &facetData) {
   facet_data facets_for_moab;
 
   Handle(Poly_Triangulation) triangles = facetData.triangulation;
@@ -89,7 +82,8 @@ facet_data make_surface_facets(const TopoDS_Face &currentFace, const FaceterData
 }
 
 // make the edge facets
-edge_data make_edge_facets(const TopoDS_Face &currentFace, const TopoDS_Edge &currentEdge, const FaceterData &facetData) {
+edge_data make_edge_facets(const TopoDS_Edge &currentEdge,
+                           const TriangulationWithLocation &facetData) {
 
   edge_data edges_for_moab;
 
@@ -119,7 +113,9 @@ surface_data get_facets_for_face(const TopoDS_Face &currentFace) {
   surface_data surface;
 
   // get the triangulation for the current face
-  FaceterData data = get_triangulation(currentFace);
+  TriangulationWithLocation data;
+  data.triangulation = BRep_Tool::Triangulation(currentFace, data.loc);
+
   // make facets for current face
   surface.facets = make_surface_facets(currentFace, data);
 
@@ -128,7 +124,7 @@ surface_data get_facets_for_face(const TopoDS_Face &currentFace) {
   for (int i = 1; i <= edges.Extent(); i++) {
     const TopoDS_Edge &currentEdge = TopoDS::Edge(edges(i));
     // make the edge facets
-    edge_data edges = make_edge_facets(currentFace, currentEdge, data);
+    edge_data edges = make_edge_facets(currentEdge, data);
     surface.edge_collection.push_back(edges);
   }
   return surface;

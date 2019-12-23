@@ -1,3 +1,5 @@
+#include "dagmc_faceter.hh"
+
 #include <iostream>
 #include <array>
 #include <omp.h>
@@ -205,13 +207,7 @@ void sew_shapes(const TopoDS_Shape &shape, TopTools_HSequenceOfShape &sewed_shap
   }
 }
 
-int main(int argc, char *argv[]) {
-
-  std::string brep_file(argv[1]);
-  std::string ftol(argv[2]);
-  float facet_tol = std::stof(ftol);
-  std::string filename(argv[3]);
-
+void dagmc_faceter(std::string brep_file, float facet_tol, std::string h5m_file) {
   TopoDS_Shape shape;
   BRep_Builder builder;
   BRepTools::Read(shape, brep_file.c_str(), builder);
@@ -224,6 +220,19 @@ int main(int argc, char *argv[]) {
   MBTool mbtool;
   mbtool.set_tags();
   facet_all_volumes(shape_list, facet_tol, mbtool);
-  mbtool.write_geometry(filename.c_str());
+  mbtool.write_geometry(h5m_file.c_str());
+}
+
+int main(int argc, char *argv[]) {
+  if (argc < 4) {
+    std::cerr << "Usage: occ_faceter BREP_FILE TOLERANCE H5M_FILE" << std::endl;
+    return 1;
+  }
+
+  std::string brep_file(argv[1]);
+  float facet_tol = std::stof(argv[2]);
+  std::string h5m_file(argv[3]);
+
+  dagmc_faceter(brep_file, facet_tol, h5m_file);
   return 0;
 }

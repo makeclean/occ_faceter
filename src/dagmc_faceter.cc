@@ -50,20 +50,17 @@ struct FaceterData {
 };
 
 // get the triangulation for the current face
-FaceterData get_triangulation(TopoDS_Face currentFace) {
-  TopLoc_Location loc;
-  Handle(Poly_Triangulation) triangles = BRep_Tool::Triangulation(currentFace, loc);
+FaceterData get_triangulation(const TopoDS_Face &currentFace) {
   FaceterData data;
-  data.loc = loc;
-  data.triangulation = triangles;
+  data.triangulation = BRep_Tool::Triangulation(currentFace, data.loc);
   return data;
 }
 
-facet_data make_surface_facets(TopoDS_Face currentFace, FaceterData facetData) {
+facet_data make_surface_facets(const TopoDS_Face &currentFace, const FaceterData &facetData) {
   facet_data facets_for_moab;
 
   Handle(Poly_Triangulation) triangles = facetData.triangulation;
-  TopLoc_Location loc = facetData.loc;
+  const gp_Trsf &local_transform = facetData.loc;
 
   if (triangles.IsNull()) {
     std::cout << "No facets for surface" << std::endl;
@@ -71,7 +68,6 @@ facet_data make_surface_facets(TopoDS_Face currentFace, FaceterData facetData) {
   } else {
     // retrieve facet data
 
-    gp_Trsf local_transform = loc;
     const TColgp_Array1OfPnt &nodes = triangles->Nodes();
     for (int i = nodes.Lower(); i <= nodes.Upper(); i++) {
       Standard_Real x, y, z;
@@ -84,10 +80,10 @@ facet_data make_surface_facets(TopoDS_Face currentFace, FaceterData facetData) {
     // copy the facet_data
     std::array<int, 3> conn;
     const Poly_Array1OfTriangle &tris = triangles->Triangles();
-//     std::cout << "Face has " << tris.Length() << " triangles" << std::endl;
+    //     std::cout << "Face has " << tris.Length() << " triangles" << std::endl;
     for (int i = tris.Lower(); i <= tris.Upper(); i++) {
       // get the node indexes for this triangle
-      Poly_Triangle tri = tris(i);
+      const Poly_Triangle &tri = tris(i);
       tri.Get(conn[0], conn[1], conn[2]);
 
       facets_for_moab.connectivity.push_back(conn);
@@ -97,28 +93,25 @@ facet_data make_surface_facets(TopoDS_Face currentFace, FaceterData facetData) {
 }
 
 // make the edge facets
-edge_data make_edge_facets(TopoDS_Face currentFace, TopoDS_Edge currentEdge, FaceterData facetData) {
+edge_data make_edge_facets(const TopoDS_Face &currentFace, const TopoDS_Edge &currentEdge, const FaceterData &facetData) {
 
   edge_data edges_for_moab;
-  Handle(Poly_Triangulation) triangles = facetData.triangulation;
-  TopLoc_Location loc = facetData.loc;
 
-  // get the faceting for the edge
-  Handle(Poly_PolygonOnTriangulation) edges = BRep_Tool::PolygonOnTriangulation(currentEdge, triangles, loc);
-
-  if (triangles.IsNull()) {
+  if (facetData.triangulation.IsNull()) {
     std::cout << "No facets for surface" << std::endl;
-    return edges_for_moab;
   } else {
-    // retrieve facet data
-    std::vector<int> conn;
+    // get the faceting for the edge
+    Handle(Poly_PolygonOnTriangulation) edges =
+        BRep_Tool::PolygonOnTriangulation(currentEdge, facetData.triangulation, facetData.loc);
+
+    // convert TColStd_Array1OfInteger to std::vector<int>
+    std::vector<int> &conn = edges_for_moab.connectivity;
     const TColStd_Array1OfInteger &lines = edges->Nodes();
     for (int i = lines.Lower(); i <= lines.Upper(); i++) {
       conn.push_back(lines(i));
     }
-    edges_for_moab.connectivity = conn;
-    return edges_for_moab;
   }
+  return edges_for_moab;
 }
 
 struct surface_data {
@@ -126,7 +119,7 @@ struct surface_data {
   std::vector<edge_data> edge_collection;
 };
 
-surface_data get_facets_for_face(TopoDS_Face currentFace) {
+surface_data get_facets_for_face(const TopoDS_Face &currentFace) {
   surface_data surface;
 
   // get the triangulation for the current face
@@ -137,7 +130,7 @@ surface_data get_facets_for_face(TopoDS_Face currentFace) {
   TopTools_IndexedMapOfShape edges;
   TopExp::MapShapes(currentFace, TopAbs_EDGE, edges);
   for (int i = 1; i <= edges.Extent(); i++) {
-    TopoDS_Edge currentEdge = TopoDS::Edge(edges(i));
+    const TopoDS_Edge &currentEdge = TopoDS::Edge(edges(i));
     // make the edge facets
     edge_data edges = make_edge_facets(currentFace, currentEdge, data);
     surface.edge_collection.push_back(edges);
@@ -146,12 +139,12 @@ surface_data get_facets_for_face(TopoDS_Face currentFace) {
 }
 
 // Use BRepMesh_IncrementalMesh to make the triangulation
-void perform_faceting(TopoDS_Face face) {
+void perform_faceting(const TopoDS_Face &face) {
   // This constructor calls Perform()
   BRepMesh_IncrementalMesh facets(face, facet_tol, false, 0.5);
 }
 
-void facet_all_volumes(const TopTools_HSequenceOfShape& shape_list) {
+void facet_all_volumes(const TopTools_HSequenceOfShape &shape_list) {
   int count = shape_list.Length();
 
   std::vector<TopoDS_Face> uniqueFaces;
@@ -159,9 +152,9 @@ void facet_all_volumes(const TopTools_HSequenceOfShape& shape_list) {
 
   // list unique faces, create empty surfaces, and build surfaceMap
   for (int i = 1; i <= count; i++) {
-    TopoDS_Shape shape = shape_list.Value(i);
+    const TopoDS_Shape &shape = shape_list.Value(i);
     for (TopExp_Explorer ex(shape, TopAbs_FACE); ex.More(); ex.Next()) {
-      TopoDS_Face face = TopoDS::Face(ex.Current());
+      const TopoDS_Face &face = TopoDS::Face(ex.Current());
       // Important note: For the surface map, face equivalence is defined
       // by TopoDS_Shape::IsSame(), which ignores the orientation.
       if (surfaceMap.Contains(face))
@@ -183,7 +176,7 @@ void facet_all_volumes(const TopTools_HSequenceOfShape& shape_list) {
 
   // add facets (and edges) to surfaces
   for (MapFaceToSurface::Iterator it(surfaceMap); it.More(); it.Next()) {
-    TopoDS_Face face = it.Key();
+    const TopoDS_Face &face = it.Key();
     moab::EntityHandle surface = it.Value();
     surface_data data = get_facets_for_face(face);
     mbtool->add_facets_and_curves_to_surface(surface, data.facets, data.edge_collection);
@@ -191,13 +184,13 @@ void facet_all_volumes(const TopTools_HSequenceOfShape& shape_list) {
 
   // create volumes and add surfaces
   for (int i = 1; i <= count; i++) {
-    TopoDS_Shape shape = shape_list.Value(i);
+    const TopoDS_Shape &shape = shape_list.Value(i);
 
     moab::EntityHandle vol;
     mbtool->make_new_volume(vol);
 
     for (TopExp_Explorer ex(shape, TopAbs_FACE); ex.More(); ex.Next()) {
-      TopoDS_Face face = TopoDS::Face(ex.Current());
+      const TopoDS_Face &face = TopoDS::Face(ex.Current());
       moab::EntityHandle surface = surfaceMap.FindFromKey(face);
       int sense = face.Orientation() == TopAbs_REVERSED ? moab::SENSE_REVERSE : moab::SENSE_FORWARD;
       mbtool->add_surface_to_volume(surface, vol, sense);
@@ -205,7 +198,7 @@ void facet_all_volumes(const TopTools_HSequenceOfShape& shape_list) {
   }
 }
 
-void sew_shapes(const TopoDS_Shape& shape, TopTools_HSequenceOfShape& sewed_shapes) {
+void sew_shapes(const TopoDS_Shape &shape, TopTools_HSequenceOfShape &sewed_shapes) {
   if (shape.ShapeType() == TopAbs_COMPOUND) {
     // decend and get children
     for (TopoDS_Iterator it = TopoDS_Iterator(shape); it.More(); it.Next()) {

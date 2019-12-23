@@ -40,10 +40,6 @@
 
 typedef NCollection_IndexedDataMap<TopoDS_Face, moab::EntityHandle, TopTools_ShapeMapHasher> MapFaceToSurface;
 
-MBTool *mbtool = new MBTool();
-
-float facet_tol = 0.;
-
 struct FaceterData {
   TopLoc_Location loc;
   Handle(Poly_Triangulation) triangulation;
@@ -139,12 +135,13 @@ surface_data get_facets_for_face(const TopoDS_Face &currentFace) {
 }
 
 // Use BRepMesh_IncrementalMesh to make the triangulation
-void perform_faceting(const TopoDS_Face &face) {
+void perform_faceting(const TopoDS_Face &face, float facet_tol) {
   // This constructor calls Perform()
   BRepMesh_IncrementalMesh facets(face, facet_tol, false, 0.5);
 }
 
-void facet_all_volumes(const TopTools_HSequenceOfShape &shape_list) {
+void facet_all_volumes(const TopTools_HSequenceOfShape &shape_list,
+                       float facet_tol, MBTool *mbtool) {
   int count = shape_list.Length();
 
   std::vector<TopoDS_Face> uniqueFaces;
@@ -171,7 +168,7 @@ void facet_all_volumes(const TopTools_HSequenceOfShape &shape_list) {
   // (a range based for loop doesn't seem to work with OpenMP)
 #pragma omp parallel for
   for (int i = 0; i < uniqueFaces.size(); i++) {
-    perform_faceting(uniqueFaces[i]);
+    perform_faceting(uniqueFaces[i], facet_tol);
   }
 
   // add facets (and edges) to surfaces
@@ -221,10 +218,8 @@ int main(int argc, char *argv[]) {
 
   std::string brep_file(argv[1]);
   std::string ftol(argv[2]);
-  facet_tol = std::stod(ftol);
+  float facet_tol = std::stof(ftol);
   std::string filename(argv[3]);
-
-  moab::ErrorCode rval = mbtool->set_tags();
 
   TopoDS_Shape shape;
   BRep_Builder builder;
@@ -235,7 +230,11 @@ int main(int argc, char *argv[]) {
 
   std::cout << "Instanciated " << shape_list.Length() << " items from file" << std::endl;
 
-  facet_all_volumes(shape_list);
+  MBTool *mbtool = new MBTool();
+  moab::ErrorCode rval = mbtool->set_tags();
+
+  facet_all_volumes(shape_list, facet_tol, mbtool);
+
   mbtool->write_geometry(filename.c_str());
   delete mbtool;
   return 0;

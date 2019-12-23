@@ -206,7 +206,6 @@ void sew_shapes(const TopoDS_Shape &shape, TopTools_HSequenceOfShape &sewed_shap
     }
   } else if (shape.ShapeType() == TopAbs_SOLID) {
     // sew together all the curves
-    BRepOffsetAPI_Sewing(1.0e-06, Standard_True);
     BRepOffsetAPI_Sewing sew;
     sew.Add(shape);
     sew.Perform();

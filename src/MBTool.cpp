@@ -243,3 +243,10 @@ void summarise() {
   moab::ErrorCode rval = moab::MB_FAILURE;
   //  rval = mbi->get_entities_by_type_and_tag(0,moab::MBENTITYSET,
 }
+
+moab::ErrorCode MBTool::get_entities_by_dimension(const moab::EntityHandle meshset,
+                                                  const int dimension,
+                                                  std::vector<moab::EntityHandle> &entities,
+                                                  const bool recursive) const {
+  return mbi->get_entities_by_dimension(meshset, dimension, entities, recursive);
+}

@@ -46,6 +46,11 @@ public:
 						    std::vector<edge_data> edge_data);
   moab::ErrorCode add_surface_to_volume(moab::EntityHandle surface,
           moab::EntityHandle volume, int sense);
+
+  moab::ErrorCode get_entities_by_dimension(const moab::EntityHandle meshset,
+                                            const int dimension,
+                                            std::vector<moab::EntityHandle> &entities,
+                                            const bool recursive) const;
 private:
   moab::ErrorCode check_vertex_exists(std::array<double,3> coord, moab::EntityHandle &tVertex);
   moab::ErrorCode make_new_curve(moab::EntityHandle &curve);

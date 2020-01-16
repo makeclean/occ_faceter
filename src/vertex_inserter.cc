@@ -18,12 +18,6 @@ VertexInserter::VertexInserter(moab::Core *moab_ptr, double tolerance) {
   count = 0;
 }
 
-// desctructor
-VertexInserter::~VertexInserter() {
-  boxes.clear();
-  rtree.RemoveAll();
-}
-
 // insert the given vertex into the moab database - creates a new
 // vertex if it doesnt exist - otherwise returns (by arg) the handle
 // to the existing one - rval is ENTITY_NOT_FOUND if its new -

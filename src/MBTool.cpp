@@ -19,7 +19,7 @@ MBTool::MBTool() {
     // new vertex inserter
     vi = new VertexInserter::VertexInserter(mbi,1.e-6); // should pass the
                                         // tolernace by arg  
-    
+    groupID = 0;
     volID = 0;
     surfID = 0;
     curveID = 0;
@@ -47,6 +47,10 @@ MBTool::MBTool() {
     rval = mbi->tag_get_handle(CATEGORY_TAG_NAME, CATEGORY_TAG_SIZE, moab::MB_TYPE_OPAQUE, 
     			       category_tag, moab::MB_TAG_SPARSE | moab::MB_TAG_CREAT);
     MB_CHK_SET_ERR_RET(rval, "Error creating category_tag");
+
+    rval = mbi->tag_get_handle(NAME_TAG_NAME, NAME_TAG_SIZE, moab::MB_TYPE_OPAQUE,
+                               name_tag, moab::MB_TAG_SPARSE | moab::MB_TAG_CREAT);
+    MB_CHK_SET_ERR_RET(rval, "Error creating name_tag");
 }
 
 // destructor
@@ -92,6 +96,35 @@ moab::ErrorCode MBTool::add_surface(moab::EntityHandle volume,
   rval = make_new_surface(surface);
   rval = add_facets_and_curves_to_surface(surface,facetData,edges);
   rval = mbi->add_parent_child(volume,surface);
+  return rval;
+}
+
+// add a new group (for materials)
+moab::ErrorCode MBTool::add_group(const std::string &name,
+                                  const std::vector<moab::EntityHandle> &entities) {
+  groupID++;
+  moab::ErrorCode rval;
+  moab::EntityHandle group;
+  rval = mbi->create_meshset(moab::MESHSET_SET, group);
+  if (moab::MB_SUCCESS != rval) return rval;
+
+  rval = mbi->tag_set_data(id_tag, &group, 1, &groupID);
+  if (moab::MB_SUCCESS != rval) return rval;
+
+  rval = mbi->tag_set_data(category_tag, &group, 1, &geom_categories[4]);
+  if (moab::MB_SUCCESS != rval) return rval;
+
+  char namebuf[NAME_TAG_SIZE];
+  memset(namebuf, '\0', NAME_TAG_SIZE);
+  strncpy(namebuf, name.c_str(), NAME_TAG_SIZE - 1);
+  if (name.length() >= (unsigned)NAME_TAG_SIZE) {
+    std::cout << "WARNING: group name '" << name.c_str()
+              << "' truncated to '" << namebuf << "'" << std::endl;
+  }
+  rval = mbi->tag_set_data(name_tag, &group, 1, namebuf);
+  if (moab::MB_SUCCESS != rval) return rval;
+
+  rval = mbi->add_entities(group, entities.data(), entities.size());
   return rval;
 }
 

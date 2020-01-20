@@ -46,6 +46,8 @@ public:
 						    std::vector<edge_data> edge_data);
   moab::ErrorCode add_surface_to_volume(moab::EntityHandle surface,
           moab::EntityHandle volume, int sense);
+  moab::ErrorCode add_group(const std::string &name,
+                            const std::vector<moab::EntityHandle> &entities);
 
   moab::ErrorCode get_entities_by_dimension(const moab::EntityHandle meshset,
                                             const int dimension,
@@ -60,6 +62,7 @@ private:
   moab::Core *mbi;
   VertexInserter::VertexInserter *vi;
   moab::GeomTopoTool *geom_tool;
+  int groupID;
   int volID;
   int surfID;
   int curveID;
@@ -68,6 +71,7 @@ private:
   moab::Tag faceting_tol_tag, geometry_resabs_tag;
   moab::Tag category_tag;
   moab::Tag vol_id_tag, surf_id_tag; // tags for triangles for plotting
+  moab::Tag name_tag;
   moab::Range existing_vertices;
 
 };

@@ -2,6 +2,8 @@
 
 #include <iostream>
 #include <array>
+#include <map>
+#include <unordered_map>
 #include <omp.h>
 
 #include "BRep_Tool.hxx"
@@ -34,6 +36,11 @@
 #include "BRepTools.hxx"
 #include "BRep_Builder.hxx"
 #include "NCollection_IndexedDataMap.hxx"
+
+#include "BRepGProp.hxx"
+#include "GProp_GProps.hxx"
+#include "UniqueId/UniqueId.h" // this file also dep "UniqueId/half.hpp"
+#include "read_metadata.hh"
 
 typedef NCollection_IndexedDataMap<TopoDS_Face, moab::EntityHandle, TopTools_ShapeMapHasher> MapFaceToSurface;
 
@@ -133,8 +140,17 @@ void perform_faceting(const TopoDS_Face &face, float facet_tol) {
   BRepMesh_IncrementalMesh facets(face, facet_tol, false, 0.5);
 }
 
+std::uint64_t calculate_unique_id(const TopoDS_Shape &shape) {
+  GProp_GProps v_props;
+  BRepGProp::VolumeProperties(shape, v_props);
+  return PPP::Utilities::geometryUniqueID(v_props.Mass(),
+                                          {v_props.CentreOfMass().X(),
+                                           v_props.CentreOfMass().Y(),
+                                           v_props.CentreOfMass().Z()});
+}
+
 void facet_all_volumes(const TopTools_HSequenceOfShape &shape_list,
-                       float facet_tol, MBTool &mbtool) {
+                       float facet_tol, MBTool &mbtool, MaterialsMap &mat_map) {
   int count = shape_list.Length();
 
   std::vector<TopoDS_Face> uniqueFaces;
@@ -172,6 +188,9 @@ void facet_all_volumes(const TopTools_HSequenceOfShape &shape_list,
     mbtool.add_facets_and_curves_to_surface(surface, data.facets, data.edge_collection);
   }
 
+  // build a list of volumes for each material
+  std::map<std::string, std::vector<moab::EntityHandle>> material_volumes;
+
   // create volumes and add surfaces
   for (int i = 1; i <= count; i++) {
     const TopoDS_Shape &shape = shape_list.Value(i);
@@ -185,6 +204,24 @@ void facet_all_volumes(const TopTools_HSequenceOfShape &shape_list,
       int sense = face.Orientation() == TopAbs_REVERSED ? moab::SENSE_REVERSE : moab::SENSE_FORWARD;
       mbtool.add_surface_to_volume(surface, vol, sense);
     }
+
+    // update map from material name to volumes
+    if (!mat_map.empty()) {
+      std::uint64_t uniqueID = calculate_unique_id(shape);
+      std::string material = mat_map[uniqueID];
+      if (!material.empty()) {
+        material_volumes[material].push_back(vol);
+      } else  {
+        std::cout << "No material found for ID: " << uniqueID << std::endl;
+      }
+    }
+  }
+
+  // create material groups
+  for (auto &pair : material_volumes) {
+    std::string material = pair.first;
+    std::vector<moab::EntityHandle> &volumes = pair.second;
+    mbtool.add_group(material, volumes);
   }
 }
 
@@ -207,12 +244,13 @@ void sew_shapes(const TopoDS_Shape &shape, TopTools_HSequenceOfShape &sewed_shap
   }
 }
 
-void sew_and_facet(TopoDS_Shape &shape, float facet_tol, MBTool &mbtool) {
+void sew_and_facet(TopoDS_Shape &shape, float facet_tol, MBTool &mbtool,
+                   MaterialsMap &mat_map) {
   TopTools_HSequenceOfShape shape_list;
   sew_shapes(shape, shape_list);
   std::cout << "Instanciated " << shape_list.Length() << " items from file" << std::endl;
 
-  facet_all_volumes(shape_list, facet_tol, mbtool);
+  facet_all_volumes(shape_list, facet_tol, mbtool, mat_map);
 }
 
 void dagmc_faceter(std::string brep_file, float facet_tol, std::string h5m_file) {
@@ -220,8 +258,13 @@ void dagmc_faceter(std::string brep_file, float facet_tol, std::string h5m_file)
   BRep_Builder builder;
   BRepTools::Read(shape, brep_file.c_str(), builder);
 
+  std::string json_file = brep_file.substr(0, brep_file.length() - 5) + "_metadata.json";
+
+  MaterialsMap materials_map;
+  read_metadata(json_file, materials_map);
+
   MBTool mbtool;
   mbtool.set_tags();
-  sew_and_facet(shape, facet_tol, mbtool);
+  sew_and_facet(shape, facet_tol, mbtool, materials_map);
   mbtool.write_geometry(h5m_file.c_str());
 }

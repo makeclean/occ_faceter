@@ -4,15 +4,7 @@
 #include "TopoDS_Shape.hxx"
 #include "BRepTools.hxx"
 
-int main(int argc, char *argv[]) {
-  if (argc < 3) {
-    std::cout << "Usage: step2breps STEP_FILE OUTPUT_FILES_PREFIX" << std::endl;
-    return 1;
-  }
-
-  std::string step_file(argv[1]);
-  std::string brep_file_prefix(argv[2]);
-
+int step2breps(std::string step_file, std::string brep_file_prefix) {
   STEPControl_Reader *step = new STEPControl_Reader();
 
   step->ReadFile(step_file.c_str());
@@ -38,5 +30,18 @@ int main(int argc, char *argv[]) {
   std::cout << std::endl;
 
   delete step;
+  return count;
+}
+
+int main(int argc, char *argv[]) {
+  if (argc < 3) {
+    std::cout << "Usage: step2breps STEP_FILE OUTPUT_FILES_PREFIX" << std::endl;
+    return 1;
+  }
+
+  std::string step_file(argv[1]);
+  std::string brep_file_prefix(argv[2]);
+  step2breps(step_file, brep_file_prefix);
+
   return 0;
 }

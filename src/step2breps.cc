@@ -5,22 +5,22 @@
 #include "BRepTools.hxx"
 
 int step2breps(std::string step_file, std::string brep_file_prefix) {
-  STEPControl_Reader *step = new STEPControl_Reader();
+  STEPControl_Reader step;
 
-  step->ReadFile(step_file.c_str());
-  step->PrintCheckLoad(false, IFSelect_ListByItem);
-  step->ClearShapes();
-  int count = step->NbRootsForTransfer();
-  int r_count = step->TransferRoots();
+  step.ReadFile(step_file.c_str());
+  step.PrintCheckLoad(false, IFSelect_ListByItem);
+  step.ClearShapes();
+  int count = step.NbRootsForTransfer();
+  int r_count = step.TransferRoots();
   std::cout << "count: " << count << std::endl;
   std::cout << "r_count: " << r_count << std::endl;
-  std::cout << "n_shapes: " << step->NbShapes() << std::endl;
+  std::cout << "n_shapes: " << step.NbShapes() << std::endl;
 
   for (int i = 1; i <= count; i++) {
-    bool ok = step->TransferRoot(i);
-    step->PrintCheckTransfer(false, IFSelect_CountByItem);
+    bool ok = step.TransferRoot(i);
+    step.PrintCheckTransfer(false, IFSelect_CountByItem);
     if (ok) {
-      TopoDS_Shape shape = step->Shape(i);
+      TopoDS_Shape shape = step.Shape(i);
       std::string path = brep_file_prefix + std::to_string(i) + ".brep";
       BRepTools::Write(shape, path.c_str());
       std::cout << i << " ";
@@ -28,8 +28,6 @@ int step2breps(std::string step_file, std::string brep_file_prefix) {
   }
 
   std::cout << std::endl;
-
-  delete step;
   return count;
 }
 

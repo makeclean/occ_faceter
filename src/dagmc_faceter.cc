@@ -150,7 +150,8 @@ std::uint64_t calculate_unique_id(const TopoDS_Shape &shape) {
 }
 
 void facet_all_volumes(const TopTools_HSequenceOfShape &shape_list,
-                       float facet_tol, MBTool &mbtool, MaterialsMap &mat_map) {
+                       float facet_tol, MBTool &mbtool, MaterialsMap &mat_map,
+                       std::string single_material) {
   int count = shape_list.Length();
 
   std::vector<TopoDS_Face> uniqueFaces;
@@ -206,12 +207,16 @@ void facet_all_volumes(const TopTools_HSequenceOfShape &shape_list,
     }
 
     // update map from material name to volumes
-    if (!mat_map.empty()) {
+
+    // if single_material is set, then ignore mat_map
+    if (!single_material.empty()) {
+      material_volumes[single_material].push_back(vol);
+    } else if (!mat_map.empty()) {
       std::uint64_t uniqueID = calculate_unique_id(shape);
       std::string material = mat_map[uniqueID];
       if (!material.empty()) {
         material_volumes[material].push_back(vol);
-      } else  {
+      } else {
         std::cout << "No material found for ID: " << uniqueID << std::endl;
       }
     }
@@ -245,12 +250,12 @@ void sew_shapes(const TopoDS_Shape &shape, TopTools_HSequenceOfShape &sewed_shap
 }
 
 void sew_and_facet(TopoDS_Shape &shape, float facet_tol, MBTool &mbtool,
-                   MaterialsMap &mat_map) {
+                   MaterialsMap &mat_map, std::string single_material) {
   TopTools_HSequenceOfShape shape_list;
   sew_shapes(shape, shape_list);
   std::cout << "Instanciated " << shape_list.Length() << " items from file" << std::endl;
 
-  facet_all_volumes(shape_list, facet_tol, mbtool, mat_map);
+  facet_all_volumes(shape_list, facet_tol, mbtool, mat_map, single_material);
 }
 
 void dagmc_faceter(std::string brep_file, float facet_tol, std::string h5m_file) {

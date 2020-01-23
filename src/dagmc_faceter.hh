@@ -7,7 +7,8 @@
 #include "MBTool.hpp"
 #include "read_metadata.hh"
 
-void sew_and_facet(TopoDS_Shape &shape, float facet_tol, MBTool &mbtool, MaterialsMap &mat_map);
+void sew_and_facet(TopoDS_Shape &shape, float facet_tol, MBTool &mbtool,
+                   MaterialsMap &mat_map, std::string single_material = "");
 void dagmc_faceter(std::string brep_file, float facet_tol, std::string h5m_file);
 
 #endif // DAGMC_FACETER_HH

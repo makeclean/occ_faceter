@@ -65,7 +65,7 @@ moab::ErrorCode MBTool::set_tags() {
 moab::ErrorCode MBTool::make_new_volume(moab::EntityHandle &volume) {
   volID++;
 
-  std::cout << "Created new volume " << volID << std::endl;
+  // std::cout << "Created new volume " << volID << std::endl;
   
   // make a new volume set
   moab::ErrorCode rval = mbi->create_meshset(moab::MESHSET_ORDERED,volume);
@@ -94,7 +94,7 @@ moab::ErrorCode MBTool::add_surface(moab::EntityHandle volume,
 moab::ErrorCode MBTool::make_new_surface(moab::EntityHandle &surface) {
   surfID++;
   //  moab::EntityHandle surface;
-  std::cout << "Created new surface " << surfID << std::endl;
+  // std::cout << "Created new surface " << surfID << std::endl;
   
   moab::ErrorCode rval = mbi->create_meshset(moab::MESHSET_ORDERED, surface);
   // set the id tag

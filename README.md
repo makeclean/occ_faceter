@@ -11,8 +11,10 @@ Install the dependencies and start using the tool.
 
 ```sh
 $ sudo apt-get install libcgal-dev
+$ sudo add-apt-repository ppa:freecad-maintainers/freecad-stable
 $ sudo apt-get install libocc*-dev
 $ sudo apt-get install occ*
+$ sudo apt-get install libtbb-dev
 $ mkdir build
 $ cd build
 $ cmake .. -DCMAKE_INSTALL_PREFIX=..
@@ -22,13 +24,33 @@ $ make install
 
 ### Usage
 
-After installation the bin directory should contain occ_faceter and other tools. To use occ_faceter you will need a CAD geometry saved in Step file format. Th example below assumes you have a Step file called test.step. The faceting tolerance is set as 1.e-3 and the output file is called test.h5m. As an optional step mbconvert is used to convert the new h5m file into an stl file which can be visualized in paraview or visit  
+After installation the $bin$ directory should contain $steps2h5m$ and other tools. To use $steps2h5m$ you will need a json file containing a list of step files and their associated material names. Below is an example JSON_FILE.
+
+[
+    {
+        "material": "steel",
+        "filename": "tube.stp"
+    },
+    {
+        "material": "water",
+        "filename": "coolant.stp"
+    }
+]
+
+The general useage of steps2h5m requires three arguments.
 
 ```
-$ cd ../bin
-$ ./occ_faceter test.step 1.e-3 test.h5m
-$ mbconvert test.h5m test.stl
+$ ./steps2h5m JSON_FILE TOLERANCE H5M_FILE
 ```
+
+Assuming the JSON_FILE is called geometry_desciption.json and the tolerance is 0.1 and the output file is dagmc.h5m then the command would be
+
+
+```
+$ ./steps2h5m geometry_desciption.json 0.1 dagmc.h5m
+```
+
+
 
 
 

@@ -26,7 +26,7 @@ $ make install
 
 After installation the $bin$ directory should contain $steps2h5m$ and other tools. To use $steps2h5m$ you will need a json file containing a list of step files and their associated material names. Below is an example JSON_FILE.
 
-$
+```
 [
     {
         "material": "steel",
@@ -37,7 +37,7 @@ $
         "filename": "coolant.stp"
     }
 ]
-$
+```
 
 The general useage of steps2h5m requires three arguments.
 

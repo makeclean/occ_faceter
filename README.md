@@ -11,8 +11,8 @@ Install the dependencies and start using the tool.
 
 ```sh
 $ sudo apt-get install libcgal-dev
-$ sudo apt-get install libocc*-dev
-$ sudo apt-get install occ*
+$ sudo apt-get install libocc*-dev occ*
+$ sudo apt-get install liblapack-dev libhdf5-dev
 $ mkdir build
 $ cd build
 $ cmake .. -DCMAKE_INSTALL_PREFIX=..

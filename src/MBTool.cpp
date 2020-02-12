@@ -49,6 +49,7 @@ MBTool::MBTool() {
 // destructor
 MBTool::~MBTool() {
     delete mbi;
+    delete vi;
 }
 
 moab::ErrorCode MBTool::set_tags() {

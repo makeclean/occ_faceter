@@ -1,4 +1,4 @@
-#include "dagmc_faceter.hh"
+#include "brep_faceter.hh"
 
 #include <iostream>
 #include <array>
@@ -258,7 +258,7 @@ void sew_and_facet(TopoDS_Shape &shape, float facet_tol, MBTool &mbtool,
   facet_all_volumes(shape_list, facet_tol, mbtool, mat_map, single_material);
 }
 
-void dagmc_faceter(std::string brep_file, float facet_tol, std::string h5m_file) {
+void brep_faceter(std::string brep_file, float facet_tol, std::string h5m_file) {
   TopoDS_Shape shape;
   BRep_Builder builder;
   BRepTools::Read(shape, brep_file.c_str(), builder);

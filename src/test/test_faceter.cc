@@ -1,6 +1,6 @@
 #define CATCH_CONFIG_MAIN
 #include "catch.hpp"
-#include "dagmc_faceter.hh"
+#include "brep_faceter.hh"
 #include "read_metadata.hh"
 #include "BRep_Builder.hxx"
 #include "BRepTools.hxx"

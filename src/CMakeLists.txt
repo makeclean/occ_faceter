@@ -15,11 +15,11 @@ ADD_LIBRARY(mbtool MBTool.cpp)
 # occ faceter and step2breps
 LINK_DIRECTORIES("/usr/lib/x86_64-linux-gnu/")
 IF(OCE_FOUND OR OCC_FOUND )
-  ADD_LIBRARY(dagmc_faceter dagmc_faceter.cc read_metadata.cc)
+  ADD_LIBRARY(brep_faceter brep_faceter.cc read_metadata.cc)
   ADD_EXECUTABLE(occ_faceter occ_faceter.cc)
   SET(OCE_LINK_LIBS TKSTEP TKXSBase TKernel TKMath TKMesh TKTopAlgo TKBRep TKSTEPBase)
-  TARGET_LINK_LIBRARIES(dagmc_faceter mbtool vertex_inserter ${MOAB_LIBRARIES} ${OCE_LINK_LIBS})
-  TARGET_LINK_LIBRARIES(occ_faceter dagmc_faceter)
+  TARGET_LINK_LIBRARIES(brep_faceter mbtool vertex_inserter ${MOAB_LIBRARIES} ${OCE_LINK_LIBS})
+  TARGET_LINK_LIBRARIES(occ_faceter brep_faceter)
   INSTALL(TARGETS occ_faceter DESTINATION bin)
 
   ADD_EXECUTABLE(step2breps step2breps_main.cc step2breps.cc)
@@ -27,7 +27,7 @@ IF(OCE_FOUND OR OCC_FOUND )
   INSTALL(TARGETS step2breps DESTINATION bin)
 
   ADD_EXECUTABLE(steps2h5m steps2h5m.cc step2breps.cc)
-  TARGET_LINK_LIBRARIES(steps2h5m dagmc_faceter ${OCE_LINK_LIBS})
+  TARGET_LINK_LIBRARIES(steps2h5m brep_faceter ${OCE_LINK_LIBS})
   INSTALL(TARGETS steps2h5m DESTINATION bin)
 ENDIF(OCE_FOUND OR OCC_FOUND )
 

@@ -1,5 +1,5 @@
 #include <iostream>
-#include "dagmc_faceter.hh"
+#include "brep_faceter.hh"
 
 int main(int argc, char *argv[]) {
   if (argc < 4) {
@@ -11,6 +11,6 @@ int main(int argc, char *argv[]) {
   float facet_tol = std::stof(argv[2]);
   std::string h5m_file(argv[3]);
 
-  dagmc_faceter(brep_file, facet_tol, h5m_file);
+  brep_faceter(brep_file, facet_tol, h5m_file);
   return 0;
 }

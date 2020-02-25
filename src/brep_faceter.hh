@@ -1,5 +1,5 @@
-#ifndef DAGMC_FACETER_HH
-#define DAGMC_FACETER_HH
+#ifndef BREP_FACETER_HH
+#define BREP_FACETER_HH
 
 #include <string>
 
@@ -9,6 +9,6 @@
 
 void sew_and_facet(TopoDS_Shape &shape, float facet_tol, MBTool &mbtool,
                    MaterialsMap &mat_map, std::string single_material = "");
-void dagmc_faceter(std::string brep_file, float facet_tol, std::string h5m_file);
+void brep_faceter(std::string brep_file, float facet_tol, std::string h5m_file);
 
-#endif // DAGMC_FACETER_HH
+#endif // BREP_FACETER_HH

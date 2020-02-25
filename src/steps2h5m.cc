@@ -2,7 +2,7 @@
 #include <fstream>
 
 #include "STEPControl_Reader.hxx"
-#include "dagmc_faceter.hh"
+#include "brep_faceter.hh"
 #include "read_metadata.hh"
 #include "MBTool.hpp"
 #include "UniqueId/json.hpp"

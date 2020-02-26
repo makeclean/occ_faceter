@@ -17,6 +17,12 @@ void read_metadata(std::string json_file, MaterialsMap &mat_map) {
     for (const auto &p : j) {
       uint64_t uniqueID = p["uniqueID"].get<uint64_t>();
       std::string material = p["material"].get<std::string>();
+
+      // add "mat:"" prefix to non-empty materials, unless it's already there
+      if (!material.empty() && material.rfind("mat:", 0) != 0) {
+        material = "mat:" + material;
+      }
+
       mat_map[uniqueID] = material;
     }
   }

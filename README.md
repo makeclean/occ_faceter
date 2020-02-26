@@ -10,16 +10,16 @@ OCC Faceter requires [CGAL](https://cgal.org/), [MOAB](https://press3.mcs.anl.go
 Install the dependencies and start using the tool.
 
 ```sh
-$ sudo apt-get install libcgal-dev
-$ sudo add-apt-repository ppa:freecad-maintainers/freecad-stable
-$ sudo apt-get install libocc*-dev
-$ sudo apt-get install occ*
-$ sudo apt-get install libtbb-dev
-$ mkdir build
-$ cd build
-$ cmake .. -DCMAKE_INSTALL_PREFIX=..
-$ make
-$ make install
+sudo apt-get install libcgal-dev
+sudo add-apt-repository ppa:freecad-maintainers/freecad-stable
+sudo apt-get install libocc*-dev
+sudo apt-get install occ*
+sudo apt-get install libtbb-dev
+mkdir build
+cd build
+cmake .. -DCMAKE_INSTALL_PREFIX=..
+make
+make install
 ```
 
 ### Usage

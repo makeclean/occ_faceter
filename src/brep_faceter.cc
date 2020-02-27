@@ -226,6 +226,12 @@ void facet_all_volumes(const TopTools_HSequenceOfShape &shape_list,
   for (auto &pair : material_volumes) {
     std::string material = pair.first;
     std::vector<moab::EntityHandle> &volumes = pair.second;
+
+    // add "mat:"" prefix, unless it's already there
+    if (!material.empty() && material.rfind("mat:", 0) != 0) {
+      material = "mat:" + material;
+    }
+
     mbtool.add_group(material, volumes);
   }
 }
@@ -258,12 +264,10 @@ void sew_and_facet(TopoDS_Shape &shape, float facet_tol, MBTool &mbtool,
   facet_all_volumes(shape_list, facet_tol, mbtool, mat_map, single_material);
 }
 
-void brep_faceter(std::string brep_file, float facet_tol, std::string h5m_file) {
+void brep_faceter(std::string brep_file, std::string json_file, float facet_tol, std::string h5m_file) {
   TopoDS_Shape shape;
   BRep_Builder builder;
   BRepTools::Read(shape, brep_file.c_str(), builder);
-
-  std::string json_file = brep_file.substr(0, brep_file.length() - 5) + "_metadata.json";
 
   MaterialsMap materials_map;
   read_metadata(json_file, materials_map);

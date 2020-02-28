@@ -15,7 +15,7 @@ void read_metadata(std::string json_file, MaterialsMap &mat_map) {
     json j = json::parse(json_stream);
 
     for (const auto &p : j) {
-      uint64_t uniqueID = p["uniqueID"].get<uint64_t>();
+      uint64_t uniqueID = p["uniqueId"].get<uint64_t>();
       std::string material = p["material"].get<std::string>();
       mat_map[uniqueID] = material;
     }

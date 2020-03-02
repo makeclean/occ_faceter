@@ -11,7 +11,7 @@
 
 using json = nlohmann::json;
 
-void steps2h5m(std::string input_file, double facet_tol, std::string h5m_file) {
+void steps2h5m(std::string input_file, const FacetingTolerance &facet_tol, std::string h5m_file) {
 
   json j = json::parse(std::ifstream(input_file));
 

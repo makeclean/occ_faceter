@@ -135,9 +135,9 @@ surface_data get_facets_for_face(const TopoDS_Face &currentFace) {
 }
 
 // Use BRepMesh_IncrementalMesh to make the triangulation
-void perform_faceting(const TopoDS_Face &face, float facet_tol) {
+void perform_faceting(const TopoDS_Face &face, const FacetingTolerance& facet_tol) {
   // This constructor calls Perform()
-  BRepMesh_IncrementalMesh facets(face, facet_tol, false, 0.5);
+  BRepMesh_IncrementalMesh facets(face, facet_tol.tolerance, facet_tol.is_relative, 0.5);
 }
 
 std::uint64_t calculate_unique_id(const TopoDS_Shape &shape) {
@@ -150,7 +150,8 @@ std::uint64_t calculate_unique_id(const TopoDS_Shape &shape) {
 }
 
 void facet_all_volumes(const TopTools_HSequenceOfShape &shape_list,
-                       float facet_tol, MBTool &mbtool, MaterialsMap &mat_map,
+                       const FacetingTolerance& facet_tol,
+                       MBTool &mbtool, MaterialsMap &mat_map,
                        std::string single_material) {
   int count = shape_list.Length();
 
@@ -255,7 +256,7 @@ void sew_shapes(const TopoDS_Shape &shape, TopTools_HSequenceOfShape &sewed_shap
   }
 }
 
-void sew_and_facet(TopoDS_Shape &shape, float facet_tol, MBTool &mbtool,
+void sew_and_facet(TopoDS_Shape &shape, const FacetingTolerance& facet_tol, MBTool &mbtool,
                    MaterialsMap &mat_map, std::string single_material) {
   TopTools_HSequenceOfShape shape_list;
   sew_shapes(shape, shape_list);
@@ -264,7 +265,9 @@ void sew_and_facet(TopoDS_Shape &shape, float facet_tol, MBTool &mbtool,
   facet_all_volumes(shape_list, facet_tol, mbtool, mat_map, single_material);
 }
 
-void brep_faceter(std::string brep_file, std::string json_file, float facet_tol, std::string h5m_file, bool add_mat_ids) {
+void brep_faceter(std::string brep_file, std::string json_file,
+                  const FacetingTolerance& facet_tol, std::string h5m_file,
+                  bool add_mat_ids) {
   TopoDS_Shape shape;
   BRep_Builder builder;
   BRepTools::Read(shape, brep_file.c_str(), builder);

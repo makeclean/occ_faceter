@@ -2,7 +2,8 @@
 #define STEPS2H5M_HH 1
 
 #include <string>
+#include "brep_faceter.hh"
 
-void steps2h5m(std::string input_file, double facet_tol, std::string h5m_file);
+void steps2h5m(std::string input_file, const FacetingTolerance &facet_tol, std::string h5m_file);
 
 #endif // STEPS2H5M_HH

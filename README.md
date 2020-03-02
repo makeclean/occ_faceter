@@ -49,13 +49,17 @@ make install
 
 ### Usage
 
-After installation the bin directory should contain occ_faceter and other tools. To use occ_faceter you will need a CAD geometry saved in Step file format. Th example below assumes you have a Step file called test.step. The faceting tolerance is set as 1.e-3 and the output file is called test.h5m. As an optional step mbconvert is used to convert the new h5m file into an stl file which can be visualized in paraview or visit  
+After installation the bin directory should contain occ_faceter and other tools. To use occ_faceter you will need a CAD geometry,
+either in BREP format (output from PPP, with an associated JSON file), or a JSON list of STEP files (with associated materials).
+
+The example below assumes you have two files which were output by PPP, `test.brep` and the associated `test_metadata.json`.
+The default values are used for faceting tolerance (relative to edge size) and output filename.  Run `./occ_faceter --help` to view the options and their default values.
+
+mbconvert is used to convert the new h5m file into an vtk file which can then be visualized in Paraview (or Visit).  occ_faceter's optional add_mat_ids flag is used, so that different materials can be given different colours in Paraview.
 
 ```
-$ cd ../bin
-$ ./occ_faceter test.step 1.e-3 test.h5m
-$ mbconvert test.h5m test.stl
+cd ../bin
+./occ_faceter --add_mat_ids test.brep
+mbconvert dagmc_not_watertight.h5m test.vtk
+paraview test.vtk
 ```
-
-
-

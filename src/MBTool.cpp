@@ -51,6 +51,10 @@ MBTool::MBTool() {
     rval = mbi->tag_get_handle(NAME_TAG_NAME, NAME_TAG_SIZE, moab::MB_TYPE_OPAQUE,
                                name_tag, moab::MB_TAG_SPARSE | moab::MB_TAG_CREAT);
     MB_CHK_SET_ERR_RET(rval, "Error creating name_tag");
+
+    rval = mbi->tag_get_handle("MatID", 1, moab::MB_TYPE_INTEGER,
+                               mat_id_tag, moab::MB_TAG_DENSE | moab::MB_TAG_CREAT);
+    MB_CHK_SET_ERR_RET(rval, "Error creating mat_id_tag");
 }
 
 // destructor
@@ -125,6 +129,48 @@ moab::ErrorCode MBTool::add_group(const std::string &name,
   if (moab::MB_SUCCESS != rval) return rval;
 
   rval = mbi->add_entities(group, entities.data(), entities.size());
+  return rval;
+}
+
+// set a MatID on every triangle (in prep for converting output to .vtk, and viewing in Paraview)
+moab::ErrorCode MBTool::add_mat_ids() {
+  moab::ErrorCode rval;
+
+  // get material groups
+  moab::Range material_groups;
+  const void *tag_data = &geom_categories[4];
+  rval = mbi->get_entities_by_type_and_tag(0, moab::MBENTITYSET, &category_tag,
+                                           &tag_data, 1, material_groups);
+  if (moab::MB_SUCCESS != rval) return rval;
+
+  for (auto &&group : material_groups) {
+    // get groupID
+    int groupID;
+    rval = mbi->tag_get_data(id_tag, &group, 1, &groupID);
+    if (moab::MB_SUCCESS != rval) return rval;
+
+    // get volumes
+    moab::Range volumes;
+    rval = mbi->get_entities_by_handle(group, volumes);
+    if (moab::MB_SUCCESS != rval) return rval;
+
+    // set MatID on triangles
+    for (auto &&vol : volumes) {
+      moab::Range surfaces;
+      rval = mbi->get_child_meshsets(vol, surfaces);
+      if (moab::MB_SUCCESS != rval) return rval;
+
+      for (auto &&surface : surfaces) {
+        moab::Range tris;
+        rval = mbi->get_entities_by_type(surface, moab::MBTRI, tris, true);
+        if (moab::MB_SUCCESS != rval) return rval;
+
+        std::vector<int> matIDs(tris.size(), groupID);
+        rval = mbi->tag_set_data(mat_id_tag, tris, matIDs.data());
+        if (moab::MB_SUCCESS != rval) return rval;
+      }
+    }
+  }
   return rval;
 }
 

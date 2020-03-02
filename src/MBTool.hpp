@@ -48,6 +48,7 @@ public:
           moab::EntityHandle volume, int sense);
   moab::ErrorCode add_group(const std::string &name,
                             const std::vector<moab::EntityHandle> &entities);
+  moab::ErrorCode add_mat_ids();
 
   moab::ErrorCode get_entities_by_dimension(const moab::EntityHandle meshset,
                                             const int dimension,
@@ -72,6 +73,7 @@ private:
   moab::Tag category_tag;
   moab::Tag vol_id_tag, surf_id_tag; // tags for triangles for plotting
   moab::Tag name_tag;
+  moab::Tag mat_id_tag;
   moab::Range existing_vertices;
 
 };

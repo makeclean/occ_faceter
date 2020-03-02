@@ -264,7 +264,7 @@ void sew_and_facet(TopoDS_Shape &shape, float facet_tol, MBTool &mbtool,
   facet_all_volumes(shape_list, facet_tol, mbtool, mat_map, single_material);
 }
 
-void brep_faceter(std::string brep_file, std::string json_file, float facet_tol, std::string h5m_file) {
+void brep_faceter(std::string brep_file, std::string json_file, float facet_tol, std::string h5m_file, bool add_mat_ids) {
   TopoDS_Shape shape;
   BRep_Builder builder;
   BRepTools::Read(shape, brep_file.c_str(), builder);
@@ -275,5 +275,9 @@ void brep_faceter(std::string brep_file, std::string json_file, float facet_tol,
   MBTool mbtool;
   mbtool.set_tags();
   sew_and_facet(shape, facet_tol, mbtool, materials_map);
+
+  if (add_mat_ids)
+    mbtool.add_mat_ids();
+
   mbtool.write_geometry(h5m_file.c_str());
 }

@@ -14,6 +14,7 @@ int main(int argc, char *argv[]) {
   std::string output_file = "dagmc_not_watertight.h5m";
   double tolerance = 0.001;
   bool tol_is_absolute = false;
+  bool add_mat_ids = false;
 
   po.addRequiredArg<std::string>("input_file",
                                  "Path to brep and json output from PPP, or json list of step files and materials",
@@ -22,6 +23,7 @@ int main(int argc, char *argv[]) {
   po.addOpt<double>("tolerance,t", "Faceting tolerance (default " + std::to_string(tolerance) + ")", &tolerance);
   // TODO: po.addOpt<void>("absolute_tol,a", "Treat faceting tolerance as absolute (default is relative)", &absolute_tol);
   po.addOpt<std::string>("output_file,o", "Path to output file (default "+ output_file + ")", &output_file);
+  po.addOpt<void>("add_mat_ids", "Add MatID to every triangle (default " + std::string(add_mat_ids ? "true)" : "false)"), &add_mat_ids);
 
   po.parseCommandLine(argc, argv);
 
@@ -31,12 +33,12 @@ int main(int argc, char *argv[]) {
 
   if (has_ending(input_file, ".json")) {
     steps2h5m(input_file, tolerance, output_file);
-  } else if (has_ending(input_file, ".brep")) {    
+  } else if (has_ending(input_file, ".brep")) {
     // expecting a json file with similar path to the brep file,
     // but with ".brep" replaced by "_metadata.json"
     std::string json_file = input_file.substr(0, input_file.length() - 5) + "_metadata.json";
 
-    brep_faceter(input_file, json_file, tolerance, output_file);
+    brep_faceter(input_file, json_file, tolerance, output_file, add_mat_ids);
   } else {
     std::cerr << "Error: Path to input file must end with .json or .brep" << std::endl;
     return 1;

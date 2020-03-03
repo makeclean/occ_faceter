@@ -23,6 +23,7 @@ MBTool::MBTool() {
     volID = 0;
     surfID = 0;
     curveID = 0;
+    degenerate_triangle_count = 0;
     existing_vertices.clear();
     // make a new meshset to put stuff in
     moab::ErrorCode rval = mbi->create_meshset(moab::MESHSET_SET, rootset);
@@ -251,7 +252,7 @@ moab::ErrorCode MBTool::add_facets_and_curves_to_surface(moab::EntityHandle surf
      if ( connections[2] == connections[1] || 
           connections[1] == connections[0] || 
           connections[2] == connections[0] ) {
-       std::cout << "degenerate triangle not created" << std::endl;
+       degenerate_triangle_count++;
      } else {
        moab::ErrorCode rval = mbi->create_element(moab::MBTRI,connections,3,tri);
        triangles.insert(tri);
@@ -315,7 +316,11 @@ moab::ErrorCode MBTool::add_facets_and_curves_to_surface(moab::EntityHandle surf
 // write the geometry
 void MBTool::write_geometry(std::string filename) {
   moab::ErrorCode rval = mbi->write_file(filename.c_str());
-  return;
+
+  if (degenerate_triangle_count > 0) {
+    std::cout << "Warning: " << degenerate_triangle_count
+      << " degenerate triangles have been ignored." << std::endl;
+  }
 }
 
 void summarise() {

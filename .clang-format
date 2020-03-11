@@ -1,0 +1,6 @@
+BasedOnStyle: LLVM
+
+AllowShortIfStatementsOnASingleLine: true
+ColumnLimit:     0
+SortIncludes: false
+TabWidth: 2

@@ -97,7 +97,6 @@ struct Box {
 class VertexInserter {
   public:
     VertexInserter(moab::Core *mbi, double tolerance = 1.0e-6);
-   ~VertexInserter();
 
     // insert a vertex into the tree, if rval moab::entity_not_found
     // its a new unique vertex - else moab::entity_found handle points

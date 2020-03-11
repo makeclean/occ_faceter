@@ -2,6 +2,8 @@
 #include <iostream>
 #include <cstring>
 
+#include "moab/GeomTopoTool.hpp"
+
 const char geom_categories[][CATEGORY_TAG_SIZE] = {"Vertex\0",
 						   "Curve\0",
 						   "Surface\0",
@@ -11,12 +13,13 @@ const char geom_categories[][CATEGORY_TAG_SIZE] = {"Vertex\0",
 
 // default constructor
 MBTool::MBTool() {
-    if(mbi == NULL) mbi = new moab::Core();
+    mbi = new moab::Core();
+    geom_tool = new moab::GeomTopoTool(mbi);
 
     // new vertex inserter
     vi = new VertexInserter::VertexInserter(mbi,1.e-6); // should pass the
                                         // tolernace by arg  
-    
+    groupID = 0;
     volID = 0;
     surfID = 0;
     curveID = 0;
@@ -44,11 +47,21 @@ MBTool::MBTool() {
     rval = mbi->tag_get_handle(CATEGORY_TAG_NAME, CATEGORY_TAG_SIZE, moab::MB_TYPE_OPAQUE, 
     			       category_tag, moab::MB_TAG_SPARSE | moab::MB_TAG_CREAT);
     MB_CHK_SET_ERR_RET(rval, "Error creating category_tag");
+
+    rval = mbi->tag_get_handle(NAME_TAG_NAME, NAME_TAG_SIZE, moab::MB_TYPE_OPAQUE,
+                               name_tag, moab::MB_TAG_SPARSE | moab::MB_TAG_CREAT);
+    MB_CHK_SET_ERR_RET(rval, "Error creating name_tag");
+
+    rval = mbi->tag_get_handle("MatID", 1, moab::MB_TYPE_INTEGER,
+                               mat_id_tag, moab::MB_TAG_DENSE | moab::MB_TAG_CREAT);
+    MB_CHK_SET_ERR_RET(rval, "Error creating mat_id_tag");
 }
 
 // destructor
 MBTool::~MBTool() {
     delete mbi;
+    delete geom_tool;
+    delete vi;
 }
 
 moab::ErrorCode MBTool::set_tags() {
@@ -87,6 +100,86 @@ moab::ErrorCode MBTool::add_surface(moab::EntityHandle volume,
   rval = make_new_surface(surface);
   rval = add_facets_and_curves_to_surface(surface,facetData,edges);
   rval = mbi->add_parent_child(volume,surface);
+  return rval;
+}
+
+// add a new group (for materials)
+moab::ErrorCode MBTool::add_group(const std::string &name,
+                                  const std::vector<moab::EntityHandle> &entities) {
+  groupID++;
+  moab::ErrorCode rval;
+  moab::EntityHandle group;
+  rval = mbi->create_meshset(moab::MESHSET_SET, group);
+  if (moab::MB_SUCCESS != rval) return rval;
+
+  rval = mbi->tag_set_data(id_tag, &group, 1, &groupID);
+  if (moab::MB_SUCCESS != rval) return rval;
+
+  rval = mbi->tag_set_data(category_tag, &group, 1, &geom_categories[4]);
+  if (moab::MB_SUCCESS != rval) return rval;
+
+  char namebuf[NAME_TAG_SIZE];
+  memset(namebuf, '\0', NAME_TAG_SIZE);
+  strncpy(namebuf, name.c_str(), NAME_TAG_SIZE - 1);
+  if (name.length() >= (unsigned)NAME_TAG_SIZE) {
+    std::cout << "WARNING: group name '" << name.c_str()
+              << "' truncated to '" << namebuf << "'" << std::endl;
+  }
+  rval = mbi->tag_set_data(name_tag, &group, 1, namebuf);
+  if (moab::MB_SUCCESS != rval) return rval;
+
+  rval = mbi->add_entities(group, entities.data(), entities.size());
+  return rval;
+}
+
+// set a MatID on every triangle (in prep for converting output to .vtk, and viewing in Paraview)
+moab::ErrorCode MBTool::add_mat_ids() {
+  moab::ErrorCode rval;
+
+  // get material groups
+  moab::Range material_groups;
+  const void *tag_data = &geom_categories[4];
+  rval = mbi->get_entities_by_type_and_tag(0, moab::MBENTITYSET, &category_tag,
+                                           &tag_data, 1, material_groups);
+  if (moab::MB_SUCCESS != rval) return rval;
+
+  for (auto &&group : material_groups) {
+    // get groupID
+    int groupID;
+    rval = mbi->tag_get_data(id_tag, &group, 1, &groupID);
+    if (moab::MB_SUCCESS != rval) return rval;
+
+    // get volumes
+    moab::Range volumes;
+    rval = mbi->get_entities_by_handle(group, volumes);
+    if (moab::MB_SUCCESS != rval) return rval;
+
+    // set MatID on triangles
+    for (auto &&vol : volumes) {
+      moab::Range surfaces;
+      rval = mbi->get_child_meshsets(vol, surfaces);
+      if (moab::MB_SUCCESS != rval) return rval;
+
+      for (auto &&surface : surfaces) {
+        moab::Range tris;
+        rval = mbi->get_entities_by_type(surface, moab::MBTRI, tris, true);
+        if (moab::MB_SUCCESS != rval) return rval;
+
+        std::vector<int> matIDs(tris.size(), groupID);
+        rval = mbi->tag_set_data(mat_id_tag, tris, matIDs.data());
+        if (moab::MB_SUCCESS != rval) return rval;
+      }
+    }
+  }
+  return rval;
+}
+
+moab::ErrorCode MBTool::add_surface_to_volume(moab::EntityHandle surface,
+          moab::EntityHandle volume, int sense) {
+  moab::ErrorCode rval;
+  rval = mbi->add_parent_child(volume, surface);
+  MB_CHK_ERR(rval);
+  rval = geom_tool->set_sense(surface, volume, sense);
   return rval;
 }
 
@@ -228,4 +321,11 @@ void MBTool::write_geometry(std::string filename) {
 void summarise() {
   moab::ErrorCode rval = moab::MB_FAILURE;
   //  rval = mbi->get_entities_by_type_and_tag(0,moab::MBENTITYSET,
+}
+
+moab::ErrorCode MBTool::get_entities_by_dimension(const moab::EntityHandle meshset,
+                                                  const int dimension,
+                                                  std::vector<moab::EntityHandle> &entities,
+                                                  const bool recursive) const {
+  return mbi->get_entities_by_dimension(meshset, dimension, entities, recursive);
 }

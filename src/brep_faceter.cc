@@ -56,54 +56,51 @@ facet_data make_surface_facets(const TopoDS_Face &currentFace, const Triangulati
   const gp_Trsf &local_transform = facetData.loc;
 
   if (triangles.IsNull()) {
-    std::cout << "No facets for surface" << std::endl;
-    return facets_for_moab;
-  } else {
-    // retrieve facet data
-
-    const TColgp_Array1OfPnt &nodes = triangles->Nodes();
-    for (int i = nodes.Lower(); i <= nodes.Upper(); i++) {
-      Standard_Real x, y, z;
-      nodes(i).Coord(x, y, z);
-      local_transform.Transforms(x, y, z);
-      std::array<double, 3> coordinates;
-      coordinates[0] = x, coordinates[1] = y, coordinates[2] = z;
-      facets_for_moab.coords.push_back(coordinates);
-    }
-    // copy the facet_data
-    std::array<int, 3> conn;
-    const Poly_Array1OfTriangle &tris = triangles->Triangles();
-    //     std::cout << "Face has " << tris.Length() << " triangles" << std::endl;
-    for (int i = tris.Lower(); i <= tris.Upper(); i++) {
-      // get the node indexes for this triangle
-      const Poly_Triangle &tri = tris(i);
-      tri.Get(conn[0], conn[1], conn[2]);
-
-      facets_for_moab.connectivity.push_back(conn);
-    }
+    // std::cout << "No facets for surface" << std::endl;
     return facets_for_moab;
   }
+
+  // retrieve facet data
+  const TColgp_Array1OfPnt &nodes = triangles->Nodes();
+  for (int i = nodes.Lower(); i <= nodes.Upper(); i++) {
+    Standard_Real x, y, z;
+    nodes(i).Coord(x, y, z);
+    local_transform.Transforms(x, y, z);
+    std::array<double, 3> coordinates;
+    coordinates[0] = x, coordinates[1] = y, coordinates[2] = z;
+    facets_for_moab.coords.push_back(coordinates);
+  }
+  // copy the facet_data
+  std::array<int, 3> conn;
+  const Poly_Array1OfTriangle &tris = triangles->Triangles();
+  //     std::cout << "Face has " << tris.Length() << " triangles" << std::endl;
+  for (int i = tris.Lower(); i <= tris.Upper(); i++) {
+    // get the node indexes for this triangle
+    const Poly_Triangle &tri = tris(i);
+    tri.Get(conn[0], conn[1], conn[2]);
+
+    facets_for_moab.connectivity.push_back(conn);
+  }
+  return facets_for_moab;
 }
 
 // make the edge facets
 edge_data make_edge_facets(const TopoDS_Edge &currentEdge,
                            const TriangulationWithLocation &facetData) {
-
   edge_data edges_for_moab;
 
-  if (facetData.triangulation.IsNull()) {
-    std::cout << "No facets for surface" << std::endl;
-  } else {
-    // get the faceting for the edge
-    Handle(Poly_PolygonOnTriangulation) edges =
-        BRep_Tool::PolygonOnTriangulation(currentEdge, facetData.triangulation, facetData.loc);
+  if (facetData.triangulation.IsNull())
+    return edges_for_moab;
 
-    // convert TColStd_Array1OfInteger to std::vector<int>
-    std::vector<int> &conn = edges_for_moab.connectivity;
-    const TColStd_Array1OfInteger &lines = edges->Nodes();
-    for (int i = lines.Lower(); i <= lines.Upper(); i++) {
-      conn.push_back(lines(i));
-    }
+  // get the faceting for the edge
+  Handle(Poly_PolygonOnTriangulation) edges =
+      BRep_Tool::PolygonOnTriangulation(currentEdge, facetData.triangulation, facetData.loc);
+
+  // convert TColStd_Array1OfInteger to std::vector<int>
+  std::vector<int> &conn = edges_for_moab.connectivity;
+  const TColStd_Array1OfInteger &lines = edges->Nodes();
+  for (int i = lines.Lower(); i <= lines.Upper(); i++) {
+    conn.push_back(lines(i));
   }
   return edges_for_moab;
 }
@@ -183,11 +180,21 @@ void facet_all_volumes(const TopTools_HSequenceOfShape &shape_list,
   }
 
   // add facets (and edges) to surfaces
+  int n_surfaces_without_facets = 0;
   for (MapFaceToSurface::Iterator it(surfaceMap); it.More(); it.Next()) {
     const TopoDS_Face &face = it.Key();
     moab::EntityHandle surface = it.Value();
     surface_data data = get_facets_for_face(face);
-    mbtool.add_facets_and_curves_to_surface(surface, data.facets, data.edge_collection);
+
+    if (data.facets.coords.empty())
+      n_surfaces_without_facets++;
+    else
+      mbtool.add_facets_and_curves_to_surface(surface, data.facets, data.edge_collection);
+  }
+
+  if (n_surfaces_without_facets > 0) {
+    std::cout << "Warning: " << n_surfaces_without_facets
+      << " surfaces found without facets." << std::endl;
   }
 
   // build a list of volumes for each material

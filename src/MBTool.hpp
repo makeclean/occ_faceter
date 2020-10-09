@@ -67,6 +67,7 @@ private:
   int volID;
   int surfID;
   int curveID;
+  int degenerate_triangle_count;
   moab::EntityHandle rootset;
   moab::Tag geometry_dimension_tag, id_tag;
   moab::Tag faceting_tol_tag, geometry_resabs_tag;
@@ -75,6 +76,5 @@ private:
   moab::Tag name_tag;
   moab::Tag mat_id_tag;
   moab::Range existing_vertices;
-
 };
 #endif // MBTOOL_HPP

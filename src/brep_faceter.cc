@@ -111,6 +111,7 @@ edge_data make_edge_facets(const TopoDS_Edge &currentEdge,
 struct surface_data {
   facet_data facets;
   std::vector<edge_data> edge_collection;
+  std::vector<int> senses;
 };
 
 surface_data get_facets_for_face(const TopoDS_Face &currentFace) {
@@ -138,6 +139,8 @@ surface_data get_facets_for_face(const TopoDS_Face &currentFace) {
 void perform_faceting(const TopoDS_Face &face, const FacetingTolerance& facet_tol) {
   // This constructor calls Perform()
   BRepMesh_IncrementalMesh facets(face, facet_tol.tolerance, facet_tol.is_relative, 0.5);
+  // todo need to get the wires that belong to the face, and query their sense relative
+  // to the face
 }
 
 std::uint64_t calculate_unique_id(const TopoDS_Shape &shape) {
@@ -156,9 +159,11 @@ void facet_all_volumes(const TopTools_HSequenceOfShape &shape_list,
   int count = shape_list.Length();
 
   std::vector<TopoDS_Face> uniqueFaces;
-  MapFaceToSurface surfaceMap;
+  MapFaceToSurface surfaceMap; // map of OCCFace to Surface entities
+  MapEdgetoCurve curveMap; // map of OCCEdge to Curve entities
 
   // list unique faces, create empty surfaces, and build surfaceMap
+  // for the purpose of performing the faceting in parallel
   for (int i = 1; i <= count; i++) {
     const TopoDS_Shape &shape = shape_list.Value(i);
     for (TopExp_Explorer ex(shape, TopAbs_FACE); ex.More(); ex.Next()) {
@@ -173,40 +178,64 @@ void facet_all_volumes(const TopTools_HSequenceOfShape &shape_list,
       mbtool.make_new_surface(surface);
       surfaceMap.Add(face, surface);
     }
+    // investigate all the curves that belong to the shape
+    TopExp_Explorer Ex;
+    TopTools_IndexedMapOfShape edgeMap;
+    TopExp::MapShapes(shape,TopAbs_EDGE,edgeMap);
+    for (int i = 1 ; i <= edgeMap.Extent() ; i++ ) {
+      TopoDS_Edge aEdge = TopoDS::Edge(edgeMap(i));
+      moab::EntityHandle curve;
+      mbtool.make_new_curve(curve);
+      if(curveMap.Contains(aEdge)) {
+	std::cerr << "Edge already exists in map" << std::endl;
+      }
+      curveMap.Add(aEdge,curve);
+    }	
+    // curve topology now exists
   }
-
-  // do the hard work
+  // surface entity sets now exist
+  
+  // do the hard work - this loop doesnt do anything right now
+  // work is done but result isnt saved?
   // (a range based for loop doesn't seem to work with OpenMP)
-#pragma omp parallel for
-  for (int i = 0; i < uniqueFaces.size(); i++) {
-    perform_faceting(uniqueFaces[i], facet_tol);
-  }
+  //#pragma omp parallel for
+  //for (int i = 0; i < uniqueFaces.size(); i++) {
+  //  perform_faceting(uniqueFaces[i], facet_tol);
+  //}
 
   // add facets (and edges) to surfaces
   for (MapFaceToSurface::Iterator it(surfaceMap); it.More(); it.Next()) {
     const TopoDS_Face &face = it.Key();
     moab::EntityHandle surface = it.Value();
     surface_data data = get_facets_for_face(face);
+    //    get_curve_data(face,data); // get the curve data
     mbtool.add_facets_and_curves_to_surface(surface, data.facets, data.edge_collection);
   }
 
   // build a list of volumes for each material
   std::map<std::string, std::vector<moab::EntityHandle>> material_volumes;
 
-  // create volumes and add surfaces
+  // create volumes and add surfaces to parents
   for (int i = 1; i <= count; i++) {
     const TopoDS_Shape &shape = shape_list.Value(i);
 
     moab::EntityHandle vol;
     mbtool.make_new_volume(vol);
-
+    
+    // loop over all the surfaces adding the relationship between surfaces and volumes
     for (TopExp_Explorer ex(shape, TopAbs_FACE); ex.More(); ex.Next()) {
       const TopoDS_Face &face = TopoDS::Face(ex.Current());
       moab::EntityHandle surface = surfaceMap.FindFromKey(face);
       int sense = face.Orientation() == TopAbs_REVERSED ? moab::SENSE_REVERSE : moab::SENSE_FORWARD;
       mbtool.add_surface_to_volume(surface, vol, sense);
+      // now should set the sense of each curve wrt to the surface
     }
 
+    // now loopover the surfaces of the shape - and query the curve
+    // ownership and sense 
+    
+    // curve senses now set
+    
     // update map from material name to volumes
 
     // if single_material is set, then ignore mat_map

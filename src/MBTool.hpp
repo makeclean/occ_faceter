@@ -46,6 +46,9 @@ public:
 						    std::vector<edge_data> edge_data);
   moab::ErrorCode add_surface_to_volume(moab::EntityHandle surface,
           moab::EntityHandle volume, int sense);
+
+  moab::ErrorCode make_new_curve(moab::EntityHandle &curve);
+
   moab::ErrorCode add_group(const std::string &name,
                             const std::vector<moab::EntityHandle> &entities);
   moab::ErrorCode add_mat_ids();
@@ -56,7 +59,6 @@ public:
                                             const bool recursive) const;
 private:
   moab::ErrorCode check_vertex_exists(std::array<double,3> coord, moab::EntityHandle &tVertex);
-  moab::ErrorCode make_new_curve(moab::EntityHandle &curve);
   moab::ErrorCode add_facets_to_surface(moab::EntityHandle,
 					facet_data facetData);
   private:

@@ -3,7 +3,12 @@
 
 #include <string>
 
-#include "TopoDS_Shape.hxx"
+#ifndef OCE
+  #include "TopoDS_Shape.hxx"
+#else
+  #include "TopoDS_Shape.lxx"
+#endif
+
 #include "MBTool.hpp"
 #include "read_metadata.hh"
 

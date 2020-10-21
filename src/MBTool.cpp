@@ -23,6 +23,7 @@ MBTool::MBTool() {
     volID = 0;
     surfID = 0;
     curveID = 0;
+    vertexID = 0;
     existing_vertices.clear();
     // make a new meshset to put stuff in
     moab::ErrorCode rval = mbi->create_meshset(moab::MESHSET_SET, rootset);
@@ -75,9 +76,8 @@ moab::ErrorCode MBTool::set_tags() {
 }
 
 // make a new volume meshset 
-moab::ErrorCode MBTool::make_new_volume(moab::EntityHandle &volume) {
+moab::ErrorCode MBTool::make_new_volume_tags(moab::EntityHandle &volume) {
   volID++;
-
   // std::cout << "Created new volume " << volID << std::endl;
   
   // make a new volume set
@@ -97,7 +97,7 @@ moab::ErrorCode MBTool::add_surface(moab::EntityHandle volume,
 				    std::vector<edge_data> edges) {
   moab::ErrorCode rval;
   moab::EntityHandle surface;
-  rval = make_new_surface(surface);
+  rval = make_new_surface_tags(surface);
   rval = add_facets_and_curves_to_surface(surface,facetData,edges);
   rval = mbi->add_parent_child(volume,surface);
   return rval;
@@ -174,6 +174,26 @@ moab::ErrorCode MBTool::add_mat_ids() {
   return rval;
 }
 
+// set the appropriate parent child links and sense
+moab::ErrorCode MBTool::add_vertex_to_curve(moab::EntityHandle vertex,
+          moab::EntityHandle curve) {
+  moab::ErrorCode rval;
+  rval = mbi->add_parent_child(curve, vertex);
+  MB_CHK_ERR(rval);
+  return rval;
+}
+
+// set the appropriate parent child links and sense
+moab::ErrorCode MBTool::add_curve_to_surface(moab::EntityHandle curve,
+          moab::EntityHandle surface, int sense) {
+  moab::ErrorCode rval;
+  rval = mbi->add_parent_child(surface, curve);
+  MB_CHK_ERR(rval);
+  rval = geom_tool->set_sense(curve, surface, sense);
+  return rval;
+}
+
+// set the appropriate parent child links and sense
 moab::ErrorCode MBTool::add_surface_to_volume(moab::EntityHandle surface,
           moab::EntityHandle volume, int sense) {
   moab::ErrorCode rval;
@@ -184,7 +204,7 @@ moab::ErrorCode MBTool::add_surface_to_volume(moab::EntityHandle surface,
 }
 
 //  makes a new surface in moab
-moab::ErrorCode MBTool::make_new_surface(moab::EntityHandle &surface) {
+moab::ErrorCode MBTool::make_new_surface_tags(moab::EntityHandle &surface) {
   surfID++;
   //  moab::EntityHandle surface;
   // std::cout << "Created new surface " << surfID << std::endl;
@@ -200,7 +220,7 @@ moab::ErrorCode MBTool::make_new_surface(moab::EntityHandle &surface) {
 }
 
 //  makes a new surface in moab
-moab::ErrorCode MBTool::make_new_curve(moab::EntityHandle &curve) {
+moab::ErrorCode MBTool::make_new_curve_tags(moab::EntityHandle &curve) {
   curveID++;
   //  moab::EntityHandle surface;
   moab::ErrorCode rval = mbi->create_meshset(moab::MESHSET_SET, curve);
@@ -214,14 +234,58 @@ moab::ErrorCode MBTool::make_new_curve(moab::EntityHandle &curve) {
   return moab::MB_SUCCESS;  
 }
 
+// creates the tags associated with the a vertex set
+moab::ErrorCode MBTool::make_new_vertex_tags(moab::EntityHandle &vertex) {
+  vertexID++;
+  // create a handle
+  moab::ErrorCode rval = mbi->create_meshset(moab::MESHSET_SET,vertex);
+  if(rval != moab::MB_SUCCESS) std::cout << "Failed to make meshset" << std::endl;
+  // set the id dag
+  rval = mbi->tag_set_data(id_tag,&vertex,1,&vertexID);
+  // set the dim tag
+  int dim = 0;
+  rval = mbi->tag_set_data(geometry_dimension_tag,&vertex,1,&dim);
+  // name the meshset
+  rval = mbi->tag_set_data(category_tag,&vertex,1,&geom_categories[dim]);
+  return moab::MB_SUCCESS;
+}
+
+// add a vertex - intented for vertices from curves as opposed
+// to vertices from facets
+moab::ErrorCode MBTool::add_vertex(std::array<double,3> coord,
+				   moab::EntityHandle &vertex,
+				   moab::EntityHandle &vertex_set) {
+  moab::ErrorCode rval = check_vertex_exists(coord,vertex);
+  std::cout << rval << std::endl;
+  // if the entity wasnt found - it was created
+  if (rval == moab::MB_ENTITY_NOT_FOUND) {
+    moab::EntityHandle vertex_set;
+    moab::ErrorCode ec = make_new_vertex_tags(vertex_set);
+    MB_CHK_SET_ERR(ec,"could not make new vertex tags");
+    // make parent child link between vertex set and the vertex
+    ec = mbi->add_entities(vertex_set,&vertex,1);
+    MB_CHK_SET_ERR(ec,"could not add vertex to set");
+    // todo should return errors here
+    // store for later corrrespondence between set and vertex handle
+    vertex2vertexset[vertex] = vertex_set;
+  } else {
+    // otherwise vertex already exists - find its owning meshset
+    if(vertex2vertexset.count(vertex))
+      vertex_set = vertex2vertexset[vertex];
+    else
+      std::cout << "mucho bad" << std::endl;
+  }
+  return rval;
+}
+
 // check for the existence of a vertex, if it exists return the eh otherwise
 // create a new one 
 moab::ErrorCode MBTool::check_vertex_exists(std::array<double,3> coord,
 					    moab::EntityHandle &tVertex) {
   // get the vertices
   tVertex = 0;
-
   moab::ErrorCode rval = moab::MB_FAILURE;
+  // make or get the vertex handle
   rval = vi->insert_vertex(coord,tVertex);
   return rval;
 }
@@ -265,7 +329,7 @@ moab::ErrorCode MBTool::add_facets_and_curves_to_surface(moab::EntityHandle surf
      
      moab::EntityHandle curve;
      // construct an entity set for the curve
-     rval = make_new_curve(curve);
+     rval = make_new_curve_tags(curve);
      edges.clear();
      
      int end_point = 0;

@@ -20,7 +20,7 @@
 /// Main header file for half-precision functionality.
 
 #ifndef HALF_HALF_HPP
-#define HALF_HALF_HPP
+#define HALF_HALF_HPP 1
 
 #define HALF_GCC_VERSION (__GNUC__*100+__GNUC_MINOR__)
 

@@ -1,54 +1,5 @@
 #include "brep_faceter.hh"
 
-#include <iostream>
-#include <array>
-#include <map>
-#include <unordered_map>
-#include <omp.h>
-
-#include "BRep_Tool.hxx"
-#include "BRepMesh_IncrementalMesh.hxx"
-#include "Poly_Array1OfTriangle.hxx"
-#include "TColgp_Array1OfPnt.hxx"
-#include "TColStd_Array1OfInteger.hxx"
-#include "Poly_Triangulation.hxx"
-#include "Poly_PolygonOnTriangulation.hxx"
-
-#include "Interface_Static.hxx"
-#include "STEPControl_Reader.hxx"
-
-#include "TopoDS.hxx"
-#include "TopoDS_Shape.hxx"
-#include "TopoDS_Face.hxx"
-#include "TopoDS_Edge.hxx"
-
-#include "TopTools_HSequenceOfShape.hxx"
-#include "TopTools_IndexedMapOfShape.hxx"
-#include "TopExp_Explorer.hxx"
-#include "TopExp.hxx"
-
-#include "TopLoc_Location.hxx"
-
-#include "BRepOffsetAPI_Sewing.hxx"
-
-#include "MBTool.hpp"
-
-#include "BRepTools.hxx"
-#include "BRep_Builder.hxx"
-#include "NCollection_IndexedDataMap.hxx"
-
-#include "BRepGProp.hxx"
-#include "GProp_GProps.hxx"
-#include "UniqueId/UniqueId.h" // this file also dep "UniqueId/half.hpp"
-#include "read_metadata.hh"
-
-typedef NCollection_IndexedDataMap<TopoDS_Face, moab::EntityHandle, TopTools_ShapeMapHasher> MapFaceToSurface;
-
-struct TriangulationWithLocation {
-  TopLoc_Location loc;
-  Handle(Poly_Triangulation) triangulation;
-};
-
 facet_data make_surface_facets(const TopoDS_Face &currentFace, const TriangulationWithLocation &facetData) {
   facet_data facets_for_moab;
 
@@ -160,7 +111,7 @@ void facet_all_volumes(const TopTools_HSequenceOfShape &shape_list,
 
   std::vector<TopoDS_Face> uniqueFaces;
   MapFaceToSurface surfaceMap; // map of OCCFace to Surface entities
-  MapEdgetoCurve curveMap; // map of OCCEdge to Curve entities
+  MapEdgeToCurve curveMap; // map of OCCEdge to Curve entities
 
   // list unique faces, create empty surfaces, and build surfaceMap
   // for the purpose of performing the faceting in parallel
@@ -175,33 +126,49 @@ void facet_all_volumes(const TopTools_HSequenceOfShape &shape_list,
 
       uniqueFaces.push_back(face);
       moab::EntityHandle surface;
-      mbtool.make_new_surface(surface);
+      mbtool.make_new_surface_tags(surface);
       surfaceMap.Add(face, surface);
+
+      // investigate all the curves that belong to the shape
+      TopExp_Explorer Ex;
+      TopTools_IndexedMapOfShape edgeMap;
+      TopExp::MapShapes(face,TopAbs_EDGE,edgeMap);
+      std::cout << surface << " " << edgeMap.Extent() << std::endl;
+      for (int i = 1 ; i <= edgeMap.Extent() ; i++ ) {
+	TopoDS_Edge aEdge = TopoDS::Edge(edgeMap(i));
+	moab::EntityHandle curve;
+	mbtool.make_new_curve_tags(curve);
+	curveMap.Add(aEdge,curve);
+	// get the vertices for the edge
+	TopExp_Explorer verts(aEdge,TopAbs_VERTEX);
+	TopTools_IndexedMapOfShape vertexMap;
+	TopExp::MapShapes(aEdge,TopAbs_VERTEX,vertexMap);
+	std::cout << curve << " " << vertexMap.Extent() << std::endl;
+	if(!verts.More()) {
+	  std::cout << "No vertices" << std::endl;
+	} else {
+	  verts.ReInit();
+	}
+  
+	for ( TopExp_Explorer verts ; verts.More();verts.Next()) {
+	  TopoDS_Vertex vert = TopoDS::Vertex(verts.Current());
+	  gp_Pnt p = BRep_Tool::Pnt(vert);
+	  std::array<double,3> coord = {double(p.X()),double(p.Y()),double(p.Z())};
+	  moab::EntityHandle vertex,vertex_set;
+	  moab::ErrorCode rval = mbtool.add_vertex(coord,vertex,vertex_set);
+	  mbtool.add_vertex_to_curve(curve,vertex_set);
+	}
+      }	
+      // curve topology now exists
     }
-    // investigate all the curves that belong to the shape
-    TopExp_Explorer Ex;
-    TopTools_IndexedMapOfShape edgeMap;
-    TopExp::MapShapes(shape,TopAbs_EDGE,edgeMap);
-    for (int i = 1 ; i <= edgeMap.Extent() ; i++ ) {
-      TopoDS_Edge aEdge = TopoDS::Edge(edgeMap(i));
-      moab::EntityHandle curve;
-      mbtool.make_new_curve(curve);
-      if(curveMap.Contains(aEdge)) {
-	std::cerr << "Edge already exists in map" << std::endl;
-      }
-      curveMap.Add(aEdge,curve);
-    }	
-    // curve topology now exists
   }
   // surface entity sets now exist
   
-  // do the hard work - this loop doesnt do anything right now
-  // work is done but result isnt saved?
   // (a range based for loop doesn't seem to work with OpenMP)
-  //#pragma omp parallel for
-  //for (int i = 0; i < uniqueFaces.size(); i++) {
-  //  perform_faceting(uniqueFaces[i], facet_tol);
-  //}
+  #pragma omp parallel for
+  for (int i = 0; i < uniqueFaces.size(); i++) {
+    perform_faceting(uniqueFaces[i], facet_tol);
+  }
 
   // add facets (and edges) to surfaces
   for (MapFaceToSurface::Iterator it(surfaceMap); it.More(); it.Next()) {
@@ -220,7 +187,7 @@ void facet_all_volumes(const TopTools_HSequenceOfShape &shape_list,
     const TopoDS_Shape &shape = shape_list.Value(i);
 
     moab::EntityHandle vol;
-    mbtool.make_new_volume(vol);
+    mbtool.make_new_volume_tags(vol);
     
     // loop over all the surfaces adding the relationship between surfaces and volumes
     for (TopExp_Explorer ex(shape, TopAbs_FACE); ex.More(); ex.Next()) {
@@ -229,6 +196,21 @@ void facet_all_volumes(const TopTools_HSequenceOfShape &shape_list,
       int sense = face.Orientation() == TopAbs_REVERSED ? moab::SENSE_REVERSE : moab::SENSE_FORWARD;
       mbtool.add_surface_to_volume(surface, vol, sense);
       // now should set the sense of each curve wrt to the surface
+      for(TopExp_Explorer wires(face,TopAbs_WIRE); wires.More(); wires.Next()) {
+	// explore the wires
+	const TopoDS_Wire &wire = TopoDS::Wire(wires.Current());
+	//BRepTools_WireExplorer WireEx();
+	//WireEx.Init(wire, face);
+	//BRepTools_WireExplorer WireEx(wire);
+	//for (WireEx.Begin() ; WireEx.More(); WireEx.Next()) {
+	for (BRepTools_WireExplorer WireEx(wire,face); WireEx.More(); WireEx.Next()) {
+	  const TopoDS_Edge &edge = TopoDS::Edge(WireEx.Current());
+	  int curve_sense = edge.Orientation() == TopAbs_REVERSED ? moab::SENSE_REVERSE : moab::SENSE_FORWARD;
+	  std ::cout << &edge << " " << sense << std::endl;
+	  mbtool.add_curve_to_surface(curveMap.FindFromKey(edge), surface, curve_sense);
+	  // Process current edge
+	}
+      }
     }
 
     // now loopover the surfaces of the shape - and query the curve

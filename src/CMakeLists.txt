@@ -8,15 +8,15 @@ INCLUDE_DIRECTORIES(catch)
 SET(GCC_OPENMP_COMPILE_FLAGS "-fopenmp")
 SET(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} ${GCC_OPENMP_COMPILE_FLAGS}")
 
-ADD_LIBRARY(vertex_inserter vertex_inserter.cc)
+ADD_LIBRARY(vertex_inserter SHARED vertex_inserter.cc)
 
-ADD_LIBRARY(mbtool MBTool.cpp)
+ADD_LIBRARY(mbtool SHARED MBTool.cpp)
 
 # occ faceter and step2breps
 LINK_DIRECTORIES("/usr/lib/x86_64-linux-gnu/")
 IF(OCE_FOUND OR OCC_FOUND )
-  ADD_LIBRARY(brep_faceter brep_faceter.cc read_metadata.cc)
-  ADD_EXECUTABLE(occ_faceter occ_faceter.cc steps2h5m.cc step2breps.cc)
+  ADD_LIBRARY(brep_faceter SHARED brep_faceter.cc read_metadata.cc)
+  ADD_EXECUTABLE(occ_faceter occ_faceter.cc)
   SET(OCE_LINK_LIBS TKSTEP TKXSBase TKernel TKMath TKMesh TKTopAlgo TKBRep TKSTEPBase)
   TARGET_LINK_LIBRARIES(brep_faceter mbtool vertex_inserter ${MOAB_LIBRARIES} ${OCE_LINK_LIBS})
   TARGET_LINK_LIBRARIES(occ_faceter brep_faceter)

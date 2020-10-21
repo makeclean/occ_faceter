@@ -1,4 +1,5 @@
-#pragma once
+#ifndef UNIQUE_ID
+#define UNIQUE_ID 1
 
 #include <cassert>
 #include <cstdint>
@@ -122,3 +123,4 @@ namespace PPP
         }
     } // namespace Utilities
 } // namespace PPP
+#endif // UNIQUE_ID

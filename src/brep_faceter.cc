@@ -140,7 +140,7 @@ void perform_faceting(const TopoDS_Face &face, const FacetingTolerance& facet_to
 std::uint64_t calculate_unique_id(const TopoDS_Shape &shape) {
   GProp_GProps v_props;
   BRepGProp::VolumeProperties(shape, v_props);
-  return PPP::Utilities::geometryUniqueID(v_props.Mass(),
+  return PPP::Utilities::geometryUniqueId(v_props.Mass(),
                                           {v_props.CentreOfMass().X(),
                                            v_props.CentreOfMass().Y(),
                                            v_props.CentreOfMass().Z()});
@@ -225,7 +225,12 @@ void facet_all_volumes(const TopTools_HSequenceOfShape &shape_list,
       if (!material.empty()) {
         material_volumes[material].push_back(vol);
       } else {
-        std::cout << "No material found for ID: " << uniqueID << std::endl;
+        GProp_GProps v_props;
+        BRepGProp::VolumeProperties(shape, v_props);
+        std::cout << "Shape sequence "<< i << " : No material found for ID: " << uniqueID << std::endl;
+        std::cout << "with volume: " << v_props.Mass() << ", CentreOfMass: "
+            << v_props.CentreOfMass().X() << ", " << v_props.CentreOfMass().Y()
+            << ", " << v_props.CentreOfMass().Z() << std::endl;
       }
     }
   }

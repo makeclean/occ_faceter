@@ -200,6 +200,7 @@ moab::ErrorCode MBTool::add_surface_to_volume(moab::EntityHandle surface,
   rval = mbi->add_parent_child(volume, surface);
   MB_CHK_ERR(rval);
   rval = geom_tool->set_sense(surface, volume, sense);
+  MB_CHK_ERR(rval);
   return rval;
 }
 
@@ -256,7 +257,6 @@ moab::ErrorCode MBTool::add_vertex(std::array<double,3> coord,
 				   moab::EntityHandle &vertex,
 				   moab::EntityHandle &vertex_set) {
   moab::ErrorCode rval = check_vertex_exists(coord,vertex);
-  std::cout << rval << std::endl;
   // if the entity wasnt found - it was created
   if (rval == moab::MB_ENTITY_NOT_FOUND) {
     moab::EntityHandle vertex_set;
@@ -273,7 +273,7 @@ moab::ErrorCode MBTool::add_vertex(std::array<double,3> coord,
     if(vertex2vertexset.count(vertex))
       vertex_set = vertex2vertexset[vertex];
     else
-      std::cout << "mucho bad" << std::endl;
+      std::cout << "bad bad bad bad" << std::endl;
   }
   return rval;
 }
@@ -298,7 +298,12 @@ moab::ErrorCode MBTool::add_facets_and_curves_to_surface(moab::EntityHandle surf
    int idx = 1; // index start at 1!!
    for ( std::array<double,3> coord : facetData.coords ) {
      moab::EntityHandle vert;
+     // this will return a new vertex if one doesnt exist
+     // otherwise it will ruetnr an existing one near
+     // by
      moab::ErrorCode rval = check_vertex_exists(coord, vert);
+     // i.e. a map between the vertices from the faceting and
+     // those being added or already existing in MOAB
      vertex_map[idx] = vert;
      idx++;
    }
@@ -321,15 +326,16 @@ moab::ErrorCode MBTool::add_facets_and_curves_to_surface(moab::EntityHandle surf
        triangles.insert(tri);
      }
    }
+   
    // now make the edges
    moab::Range edges;
    moab::ErrorCode rval;
 
+   // loop over the collections of edge facets
    for ( int i = 0 ; i < edge_collection.size() ; i++ ) {
-     
-     moab::EntityHandle curve;
-     // construct an entity set for the curve
-     rval = make_new_curve_tags(curve);
+
+     moab::EntityHandle curve = edge_collection[i].curve;
+     // toplolgy should already exist - should check    
      edges.clear();
      
      int end_point = 0;
@@ -337,16 +343,19 @@ moab::ErrorCode MBTool::add_facets_and_curves_to_surface(moab::EntityHandle surf
      (end_point = edge_collection[i].connectivity.size() - 1) :
      (end_point = edge_collection[i].connectivity.size() - 2); 
 
+     // loop over the edges in the 
      for ( int j = 0 ; j < end_point ; j++ ) {
        moab::EntityHandle h;
        moab::EntityHandle connection[2];
 
        connection[0] = vertex_map[edge_collection[i].connectivity[j]];
        connection[1] = vertex_map[edge_collection[i].connectivity[j+1]];
-
-       rval = mbi->add_parent_child(curve,connection[0]);
-       rval = mbi->add_parent_child(curve,connection[1]);
+       // add the vertices to the curve set
+       rval = mbi->add_entites(curve,&connection[0],2);
+       //rval = mbi->add_parent_child(curve,connection[0]);
+       //rval = mbi->add_parent_child(curve,connection[1]);
        // create the edge type
+       
        rval = mbi->create_element(moab::MBEDGE, connection, 2, h);
        edges.insert(h);
      }

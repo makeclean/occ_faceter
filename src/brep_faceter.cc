@@ -55,15 +55,15 @@ edge_data make_edge_facets(const TopoDS_Edge &currentEdge,
     for (int i = lines.Lower(); i <= lines.Upper(); i++) {
       conn.push_back(lines(i));
     }
+
+    // tag the edge collection
+    if(!curveMap.count(currentEdge)) {
+      std::cout << "Curve doesnt exist" << std::endl;
+    }
+    edges_for_moab.surface = curveMap[currentEdge];
   }
   return edges_for_moab;
 }
-
-struct surface_data {
-  facet_data facets;
-  std::vector<edge_data> edge_collection;
-  std::vector<int> senses;
-};
 
 surface_data get_facets_for_face(const TopoDS_Face &currentFace) {
   surface_data surface;
@@ -83,6 +83,11 @@ surface_data get_facets_for_face(const TopoDS_Face &currentFace) {
     edge_data edges = make_edge_facets(currentEdge, data);
     surface.edge_collection.push_back(edges);
   }
+
+  // set the surface handle should check to see if its
+  // in the map
+  surface.surface_handle = surfaceMap[currentFace];
+  
   return surface;
 }
 
@@ -110,91 +115,99 @@ void facet_all_volumes(const TopTools_HSequenceOfShape &shape_list,
   int count = shape_list.Length();
 
   std::vector<TopoDS_Face> uniqueFaces;
-  MapFaceToSurface surfaceMap; // map of OCCFace to Surface entities
+  //  MapFaceToSurface surfaceMap; // map of OCCFace to Surface entities
   MapEdgeToCurve curveMap; // map of OCCEdge to Curve entities
 
   // list unique faces, create empty surfaces, and build surfaceMap
   // for the purpose of performing the faceting in parallel
   for (int i = 1; i <= count; i++) {
     const TopoDS_Shape &shape = shape_list.Value(i);
+
+    moab::EntityHandle vol;
+    mbtool.make_new_volume_tags(vol);
+    // add the volume to the map
+    volumeMap[shape] = vol;
+    
     for (TopExp_Explorer ex(shape, TopAbs_FACE); ex.More(); ex.Next()) {
       const TopoDS_Face &face = TopoDS::Face(ex.Current());
       // Important note: For the surface map, face equivalence is defined
       // by TopoDS_Shape::IsSame(), which ignores the orientation.
-      if (surfaceMap.Contains(face))
-        continue;
+      if(surfaceMap.count(face))
+	continue
 
       uniqueFaces.push_back(face);
       moab::EntityHandle surface;
       mbtool.make_new_surface_tags(surface);
-      surfaceMap.Add(face, surface);
+      // add the surface to the map
+      surfaceMap[face] = surface;
 
       // investigate all the curves that belong to the shape
       TopExp_Explorer Ex;
-      TopTools_IndexedMapOfShape edgeMap;
       TopExp::MapShapes(face,TopAbs_EDGE,edgeMap);
-      std::cout << surface << " " << edgeMap.Extent() << std::endl;
+      std::cout << "surface: " << surface << " edgecount: " << edgeMap.Extent() << std::endl;
+      // loop over the edges
       for (int i = 1 ; i <= edgeMap.Extent() ; i++ ) {
 	TopoDS_Edge aEdge = TopoDS::Edge(edgeMap(i));
+	// see if curve exists
+	if(edgeMap.count(eEdge))
+	  continue;
+
+	// make a new curve 
 	moab::EntityHandle curve;
 	mbtool.make_new_curve_tags(curve);
-	curveMap.Add(aEdge,curve);
+	curveMap[aEdge] = curve;
+	
 	// get the vertices for the edge
-	TopExp_Explorer verts(aEdge,TopAbs_VERTEX);
 	TopTools_IndexedMapOfShape vertexMap;
-	TopExp::MapShapes(aEdge,TopAbs_VERTEX,vertexMap);
-	std::cout << curve << " " << vertexMap.Extent() << std::endl;
-	if(!verts.More()) {
-	  std::cout << "No vertices" << std::endl;
-	} else {
-	  verts.ReInit();
-	}
-  
-	for ( TopExp_Explorer verts ; verts.More();verts.Next()) {
-	  TopoDS_Vertex vert = TopoDS::Vertex(verts.Current());
+ 	TopExp::MapShapes(aEdge,TopAbs_VERTEX,vertexMap);
+	std::cout << "curve: " << curve << " count:" << vertexMap.Extent() << std::endl;
+	for ( int v = 1 ; v <= vertexMap.Extent() ; v++) {
+  	  TopoDS_Vertex vert = TopoDS::Vertex(vertexMap(v));
 	  gp_Pnt p = BRep_Tool::Pnt(vert);
 	  std::array<double,3> coord = {double(p.X()),double(p.Y()),double(p.Z())};
 	  moab::EntityHandle vertex,vertex_set;
+	  // due to the need to unify vertices use the add_vertex method
 	  moab::ErrorCode rval = mbtool.add_vertex(coord,vertex,vertex_set);
+	  // there can only be one vertex map (conceptually)
+	  vertMap[vert] = vertex;
 	  mbtool.add_vertex_to_curve(curve,vertex_set);
+	  std::cout << curve << " " << vertex_set << std::endl;
 	}
+	// edge vertices for the curve exist
       }	
-      // curve topology now exists
+      // curve topology for the surface exists
     }
+    // volume now exists
   }
-  // surface entity sets now exist
   
-  // (a range based for loop doesn't seem to work with OpenMP)
-  #pragma omp parallel for
-  for (int i = 0; i < uniqueFaces.size(); i++) {
-    perform_faceting(uniqueFaces[i], facet_tol);
-  }
-
-  // add facets (and edges) to surfaces
-  for (MapFaceToSurface::Iterator it(surfaceMap); it.More(); it.Next()) {
-    const TopoDS_Face &face = it.Key();
-    moab::EntityHandle surface = it.Value();
-    surface_data data = get_facets_for_face(face);
-    //    get_curve_data(face,data); // get the curve data
-    mbtool.add_facets_and_curves_to_surface(surface, data.facets, data.edge_collection);
-  }
 
   // build a list of volumes for each material
   std::map<std::string, std::vector<moab::EntityHandle>> material_volumes;
 
-  // create volumes and add surfaces to parents
-  for (int i = 1; i <= count; i++) {
-    const TopoDS_Shape &shape = shape_list.Value(i);
+  // Note due to the OCC API, it is more convenient to traverse the topology of the
+  // CAD geometry - with knowledge of the imprinted and merged BREP and build some of the
+  // members in place at the appropraite time
 
-    moab::EntityHandle vol;
-    mbtool.make_new_volume_tags(vol);
-    
+  // all volume, surface, curve and vertex sets exist aready
+  // we are just setting topology and ownership now
+  for (int i = 1; i <= count; i++) {
+    // point to the current volume
+    const TopoDS_Shape &shape = shape_list.Value(i);
     // loop over all the surfaces adding the relationship between surfaces and volumes
     for (TopExp_Explorer ex(shape, TopAbs_FACE); ex.More(); ex.Next()) {
       const TopoDS_Face &face = TopoDS::Face(ex.Current());
-      moab::EntityHandle surface = surfaceMap.FindFromKey(face);
+      
+      if (surfaceMap.count(face))
+	moab::EntityHandle surface = surfaceMap[face];
+      else
+	std::cout << "Surface doesnt exist in map" << std::endl;
+        // todo this is a fatal error
+
+      // get the surface sense
       int sense = face.Orientation() == TopAbs_REVERSED ? moab::SENSE_REVERSE : moab::SENSE_FORWARD;
+      // set the sense
       mbtool.add_surface_to_volume(surface, vol, sense);
+      
       // now should set the sense of each curve wrt to the surface
       for(TopExp_Explorer wires(face,TopAbs_WIRE); wires.More(); wires.Next()) {
 	// explore the wires
@@ -207,12 +220,17 @@ void facet_all_volumes(const TopTools_HSequenceOfShape &shape_list,
 	  const TopoDS_Edge &edge = TopoDS::Edge(WireEx.Current());
 	  int curve_sense = edge.Orientation() == TopAbs_REVERSED ? moab::SENSE_REVERSE : moab::SENSE_FORWARD;
 	  std ::cout << &edge << " " << sense << std::endl;
-	  mbtool.add_curve_to_surface(curveMap.FindFromKey(edge), surface, curve_sense);
+	  if(!curveMap.count(edge)) {
+	    std::cout << "Curve not found in the map" << std::endl;
+	    // this is a fatal error
+	  }
+	  moab::EntityHandle curve = curveMap[edge];
+	  mbtool.add_curve_to_surface(curve, surface, curve_sense);
 	  // Process current edge
 	}
       }
     }
-
+    
     // now loopover the surfaces of the shape - and query the curve
     // ownership and sense 
     
@@ -245,6 +263,22 @@ void facet_all_volumes(const TopTools_HSequenceOfShape &shape_list,
     }
 
     mbtool.add_group(material, volumes);
+  }
+
+  // (a range based for loop doesn't seem to work with OpenMP)
+  // facet all the surfaces
+  #pragma omp parallel for
+  for (int i = 0; i < uniqueFaces.size(); i++) {
+    perform_faceting(uniqueFaces[i], facet_tol);
+  }
+
+  // add facets (and edges) to surfaces
+  for (MapFaceToSurface::Iterator it(surfaceMap); it.More(); it.Next()) {
+    const TopoDS_Face &face = it.Key();
+    moab::EntityHandle surface = it.Value();
+    surface_data data = get_facets_for_face(face);
+    //    get_curve_data(face,data); // get the curve data
+    mbtool.add_facets_and_curves_to_surface(surface, data.facets, data.edge_collection);
   }
 }
 

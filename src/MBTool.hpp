@@ -14,6 +14,13 @@ namespace moab {
 class GeomTopoTool;
 }
 
+struct surface_data {
+  moab::EntityHandle surface_handle;
+  facet_data facets;
+  std::vector<edge_data> edge_collection;
+  std::vector<int> senses;
+};
+
 // convenient return for facets
 struct facet_data {
   std::vector<std::array<double,3> > coords;
@@ -21,6 +28,7 @@ struct facet_data {
 };
 
 struct edge_data {
+  moab::EntityHandle curve;
   std::vector<int> connectivity;
 };
 

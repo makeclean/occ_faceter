@@ -5,3 +5,6 @@
 *.txt
 *.stp
 *.h5m
+# build dir
+build
+bld

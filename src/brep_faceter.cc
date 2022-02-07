@@ -61,10 +61,9 @@ facet_data make_surface_facets(const TopoDS_Face &currentFace, const Triangulati
   }
 
   // retrieve facet data
-  const TColgp_Array1OfPnt &nodes = triangles->Nodes();
-  for (int i = nodes.Lower(); i <= nodes.Upper(); i++) {
+  for (int i = 1; i <= triangles->NbNodes(); i++) {
     Standard_Real x, y, z;
-    nodes(i).Coord(x, y, z);
+    triangles->Node(i).Coord(x, y, z);
     local_transform.Transforms(x, y, z);
     std::array<double, 3> coordinates;
     coordinates[0] = x, coordinates[1] = y, coordinates[2] = z;
@@ -72,11 +71,10 @@ facet_data make_surface_facets(const TopoDS_Face &currentFace, const Triangulati
   }
   // copy the facet_data
   std::array<int, 3> conn;
-  const Poly_Array1OfTriangle &tris = triangles->Triangles();
   //     std::cout << "Face has " << tris.Length() << " triangles" << std::endl;
-  for (int i = tris.Lower(); i <= tris.Upper(); i++) {
+  for (int i = 1; i <= triangles->NbTriangles(); i++) {
     // get the node indexes for this triangle
-    const Poly_Triangle &tri = tris(i);
+    const Poly_Triangle &tri = triangles->Triangle(i);
     tri.Get(conn[0], conn[1], conn[2]);
 
     facets_for_moab.connectivity.push_back(conn);

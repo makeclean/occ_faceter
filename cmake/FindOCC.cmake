@@ -6,6 +6,7 @@ find_path(OCC_CMAKE_CONFIG NAMES OpenCASCADEConfig.cmake
   PATHS /usr/
   PATHS /usr/lib64
   PATHS /usr/lib64/oce-0.18
+  PATHS /usr/local
   PATH_SUFFIXES lib Lib cmake cmake/opencascade lib/cmake/opencascade
   NO_DEFAULT_PATH)
 

@@ -92,18 +92,6 @@ moab::ErrorCode MBTool::make_new_volume(moab::EntityHandle &volume) {
   return rval;
 }
 
-// add surface with edges too
-moab::ErrorCode MBTool::add_surface(moab::EntityHandle volume,
-				    facet_data facetData,
-				    std::vector<edge_data> edges) {
-  moab::ErrorCode rval;
-  moab::EntityHandle surface;
-  rval = make_new_surface(surface);
-  rval = add_facets_and_curves_to_surface(surface,facetData,edges);
-  rval = mbi->add_parent_child(volume,surface);
-  return rval;
-}
-
 // add a new group (for materials)
 moab::ErrorCode MBTool::add_group(const std::string &name,
                                   const std::vector<moab::EntityHandle> &entities) {
@@ -227,38 +215,64 @@ moab::ErrorCode MBTool::check_vertex_exists(std::array<double,3> coord,
   return rval;
 }
 
-// add facets to surface
-moab::ErrorCode MBTool::add_facets_and_curves_to_surface(moab::EntityHandle surface, facet_data facetData, std::vector<edge_data> edge_collection) {
-   
-   std::map<int,moab::EntityHandle> vertex_map;
-   // for each coordinate in the surface make the moab vertex
-   int idx = 1; // index start at 1!!
-   for ( std::array<double,3> coord : facetData.coords ) {
-     moab::EntityHandle vert;
-     moab::ErrorCode rval = check_vertex_exists(coord, vert);
-     vertex_map[idx] = vert;
-     idx++;
-   }
-   
-   //now make the triangles
-   moab::Range triangles;
-   for ( std::array<int,3> connectivity : facetData.connectivity) {
-     moab::EntityHandle tri;
-     moab::EntityHandle connections[3];
-     connections[0] = vertex_map[connectivity[0]];
-     connections[1] = vertex_map[connectivity[1]];
-     connections[2] = vertex_map[connectivity[2]];
+void MBTool::generate_facet_vertex_map(facet_vertex_map& vertex_map, facet_data facetData) {
+  vertex_map.clear();
 
-     if ( connections[2] == connections[1] || 
-          connections[1] == connections[0] || 
-          connections[2] == connections[0] ) {
-       degenerate_triangle_count++;
-     } else {
-       moab::ErrorCode rval = mbi->create_element(moab::MBTRI,connections,3,tri);
-       triangles.insert(tri);
-     }
-   }
-   // now make the edges
+  // for each coordinate in the surface make the moab vertex
+  int idx = 1; // index start at 1!!
+  for ( std::array<double,3> coord : facetData.coords ) {
+    moab::EntityHandle vert;
+    moab::ErrorCode rval = check_vertex_exists(coord, vert);
+    vertex_map[idx] = vert;
+    idx++;
+  }
+}
+
+// add facets to surface
+moab::ErrorCode MBTool::add_facets_to_surface(moab::EntityHandle surface,
+  facet_data facetData, const facet_vertex_map& vertex_map) {
+
+  //now make the triangles
+  moab::Range triangles;
+  for ( std::array<int,3> connectivity : facetData.connectivity) {
+    moab::EntityHandle tri;
+    moab::EntityHandle connections[3];
+    connections[0] = vertex_map.at(connectivity[0]);
+    connections[1] = vertex_map.at(connectivity[1]);
+    connections[2] = vertex_map.at(connectivity[2]);
+
+    if ( connections[2] == connections[1] ||
+        connections[1] == connections[0] ||
+        connections[2] == connections[0] ) {
+      degenerate_triangle_count++;
+    } else {
+      moab::ErrorCode rval = mbi->create_element(moab::MBTRI,connections,3,tri);
+      triangles.insert(tri);
+    }
+  }
+
+  moab::ErrorCode rval = mbi->add_entities(surface,triangles);
+
+  /*
+  // tag the triangles with their volume id
+  int vol_value = volID;
+  const void *vol_ptr = &vol_value;
+  // tag the triangles with their surface id
+  int surf_value = surfID;
+  const void *surf_ptr = &surf_value;
+
+  for ( moab::EntityHandle triangle : triangles ) {
+    rval = mbi->tag_set_data(vol_id_tag, &triangle,1, vol_ptr);
+    rval = mbi->tag_set_data(surf_id_tag, &triangle,1, surf_ptr);
+  }
+  */
+  return rval;
+}
+
+// add curves to surface
+moab::ErrorCode MBTool::add_curves_to_surface(moab::EntityHandle surface,
+  std::vector<edge_data> edge_collection, const facet_vertex_map& vertex_map) {
+   
    moab::Range edges;
    moab::ErrorCode rval;
 
@@ -278,8 +292,8 @@ moab::ErrorCode MBTool::add_facets_and_curves_to_surface(moab::EntityHandle surf
        moab::EntityHandle h;
        moab::EntityHandle connection[2];
 
-       connection[0] = vertex_map[edge_collection[i].connectivity[j]];
-       connection[1] = vertex_map[edge_collection[i].connectivity[j+1]];
+       connection[0] = vertex_map.at(edge_collection[i].connectivity[j]);
+       connection[1] = vertex_map.at(edge_collection[i].connectivity[j+1]);
 
        rval = mbi->add_parent_child(curve,connection[0]);
        rval = mbi->add_parent_child(curve,connection[1]);
@@ -287,31 +301,15 @@ moab::ErrorCode MBTool::add_facets_and_curves_to_surface(moab::EntityHandle surf
        rval = mbi->create_element(moab::MBEDGE, connection, 2, h);
        edges.insert(h);
      }
-     // add edges to curve
+     // add edges to curve, and curve to surface
      rval = mbi->add_entities(curve,edges);
      rval = mbi->add_parent_child(surface,curve);
    }
    // add the edges to the surface set
+   // TODO: This looks wrong - should be adding curves to the surface?
    rval = mbi->add_entities(surface,edges); 
-   rval = mbi->add_entities(surface,triangles);
-   // tag the triangles with
-
-   // tag the triangles with their volume id 
-   int vol_value = volID;
-   const void *vol_ptr = &vol_value;
-   // tag the triangles with their surface id
-   int surf_value = surfID;
-   const void *surf_ptr = &surf_value;   
-
-   /*
-   for ( moab::EntityHandle triangle : triangles ) {
-     rval = mbi->tag_set_data(vol_id_tag, &triangle,1, vol_ptr);
-     rval = mbi->tag_set_data(surf_id_tag, &triangle,1, surf_ptr);
-   }
-   */
    return rval;
 }
-
 
 // write the geometry
 void MBTool::write_geometry(std::string filename) {

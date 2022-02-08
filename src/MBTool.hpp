@@ -24,6 +24,8 @@ struct edge_data {
   std::vector<int> connectivity;
 };
 
+typedef std::map<int,moab::EntityHandle> facet_vertex_map;
+
 class MBTool {
 public:
   MBTool();
@@ -31,19 +33,16 @@ public:
 
   moab::ErrorCode set_tags();
   moab::ErrorCode make_new_volume(moab::EntityHandle &volume);
-  moab::ErrorCode add_surface(moab::EntityHandle volume,
-			      facet_data facetData);
-  moab::ErrorCode add_surface(moab::EntityHandle volume,
-			      facet_data facetData,
-			      std::vector<edge_data> edgeData);
   void write_geometry(std::string filename);
 
   void summarise();
   
   moab::ErrorCode make_new_surface(moab::EntityHandle &surface);
-  moab::ErrorCode add_facets_and_curves_to_surface(moab::EntityHandle,
-						    facet_data facetData,
-						    std::vector<edge_data> edge_data);
+  void generate_facet_vertex_map(facet_vertex_map& vertex_map, facet_data facetData);
+  moab::ErrorCode add_facets_to_surface(moab::EntityHandle surface,
+						    facet_data facetData, const facet_vertex_map& vertex_map);
+  moab::ErrorCode add_curves_to_surface(moab::EntityHandle surface,
+						    std::vector<edge_data> edge_data, const facet_vertex_map& vertex_map);
   moab::ErrorCode add_surface_to_volume(moab::EntityHandle surface,
           moab::EntityHandle volume, int sense);
   moab::ErrorCode add_group(const std::string &name,

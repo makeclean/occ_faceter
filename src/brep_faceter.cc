@@ -174,11 +174,9 @@ void facet_all_volumes(const TopTools_HSequenceOfShape &shape_list,
     data.triangulation = BRep_Tool::Triangulation(face, data.loc);
 
     // make facets for current face
-    facet_data facets;
+    facet_data facets = make_surface_facets(face, data);
+
     std::vector<edge_data> edge_collection;
-
-    facets = make_surface_facets(face, data);
-
     TopTools_IndexedMapOfShape edges;
     TopExp::MapShapes(face, TopAbs_EDGE, edges);
     for (int i = 1; i <= edges.Extent(); i++) {
@@ -190,8 +188,12 @@ void facet_all_volumes(const TopTools_HSequenceOfShape &shape_list,
 
     if (facets.coords.empty())
       n_surfaces_without_facets++;
-    else
-      mbtool.add_facets_and_curves_to_surface(surface, facets, edge_collection);
+    else {
+      facet_vertex_map vertex_map;
+      mbtool.generate_facet_vertex_map(vertex_map, facets);
+      mbtool.add_facets_to_surface(surface, facets, vertex_map);
+      mbtool.add_curves_to_surface(surface, edge_collection, vertex_map);
+    }
   }
 
   if (n_surfaces_without_facets > 0) {

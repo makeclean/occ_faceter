@@ -200,7 +200,7 @@ moab::ErrorCode MBTool::make_new_surface(moab::EntityHandle &surface) {
   return moab::MB_SUCCESS;  
 }
 
-//  makes a new surface in moab
+//  makes a new curve in moab
 moab::ErrorCode MBTool::make_new_curve(moab::EntityHandle &curve) {
   curveID++;
   //  moab::EntityHandle surface;

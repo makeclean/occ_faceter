@@ -43,6 +43,7 @@
 #include "read_metadata.hh"
 
 typedef NCollection_IndexedDataMap<TopoDS_Face, moab::EntityHandle, TopTools_ShapeMapHasher> MapFaceToSurface;
+typedef NCollection_IndexedDataMap<TopoDS_Edge, moab::EntityHandle, TopTools_ShapeMapHasher> MapEdgeToCurve;
 
 struct TriangulationWithLocation {
   TopLoc_Location loc;
@@ -152,14 +153,16 @@ void facet_all_volumes(const TopTools_HSequenceOfShape &shape_list,
 
   std::vector<TopoDS_Face> uniqueFaces;
   MapFaceToSurface surfaceMap;
+  MapEdgeToCurve edgeMap;
 
-  // list unique faces, create empty surfaces, and build surfaceMap
+  // list unique faces, create empty surfaces, and build edge and surface maps
+
+  // Important note: For the maps, edge/face equivalence is defined
+  // by TopoDS_Shape::IsSame(), which ignores the orientation.
   for (int i = 1; i <= count; i++) {
     const TopoDS_Shape &shape = shape_list.Value(i);
     for (TopExp_Explorer ex(shape, TopAbs_FACE); ex.More(); ex.Next()) {
       const TopoDS_Face &face = TopoDS::Face(ex.Current());
-      // Important note: For the surface map, face equivalence is defined
-      // by TopoDS_Shape::IsSame(), which ignores the orientation.
       if (surfaceMap.Contains(face))
         continue;
 
@@ -167,6 +170,15 @@ void facet_all_volumes(const TopTools_HSequenceOfShape &shape_list,
       moab::EntityHandle surface;
       mbtool.make_new_surface(surface);
       surfaceMap.Add(face, surface);
+    }
+    for (TopExp_Explorer ex(shape, TopAbs_EDGE); ex.More(); ex.Next()) {
+      const TopoDS_Edge &edge = TopoDS::Edge(ex.Current());
+      if (edgeMap.Contains(edge))
+        continue;
+
+      moab::EntityHandle curve;
+      mbtool.make_new_curve(curve);
+      edgeMap.Add(edge, curve);
     }
   }
 

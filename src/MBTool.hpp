@@ -54,9 +54,9 @@ public:
                                             const int dimension,
                                             std::vector<moab::EntityHandle> &entities,
                                             const bool recursive) const;
+  moab::ErrorCode make_new_curve(moab::EntityHandle &curve);
 private:
   moab::ErrorCode check_vertex_exists(std::array<double,3> coord, moab::EntityHandle &tVertex);
-  moab::ErrorCode make_new_curve(moab::EntityHandle &curve);
   moab::ErrorCode add_facets_to_surface(moab::EntityHandle,
 					facet_data facetData);
   private:

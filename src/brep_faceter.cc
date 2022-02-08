@@ -104,32 +104,6 @@ edge_data make_edge_facets(const TopoDS_Edge &currentEdge,
   return edges_for_moab;
 }
 
-struct surface_data {
-  facet_data facets;
-  std::vector<edge_data> edge_collection;
-};
-
-surface_data get_facets_for_face(const TopoDS_Face &currentFace) {
-  surface_data surface;
-
-  // get the triangulation for the current face
-  TriangulationWithLocation data;
-  data.triangulation = BRep_Tool::Triangulation(currentFace, data.loc);
-
-  // make facets for current face
-  surface.facets = make_surface_facets(currentFace, data);
-
-  TopTools_IndexedMapOfShape edges;
-  TopExp::MapShapes(currentFace, TopAbs_EDGE, edges);
-  for (int i = 1; i <= edges.Extent(); i++) {
-    const TopoDS_Edge &currentEdge = TopoDS::Edge(edges(i));
-    // make the edge facets
-    edge_data edges = make_edge_facets(currentEdge, data);
-    surface.edge_collection.push_back(edges);
-  }
-  return surface;
-}
-
 // Use BRepMesh_IncrementalMesh to make the triangulation
 void perform_faceting(const TopoDS_Face &face, const FacetingTolerance& facet_tol) {
   // This constructor calls Perform()
@@ -194,12 +168,30 @@ void facet_all_volumes(const TopTools_HSequenceOfShape &shape_list,
   for (MapFaceToSurface::Iterator it(surfaceMap); it.More(); it.Next()) {
     const TopoDS_Face &face = it.Key();
     moab::EntityHandle surface = it.Value();
-    surface_data data = get_facets_for_face(face);
 
-    if (data.facets.coords.empty())
+    // get the triangulation for the current face
+    TriangulationWithLocation data;
+    data.triangulation = BRep_Tool::Triangulation(face, data.loc);
+
+    // make facets for current face
+    facet_data facets;
+    std::vector<edge_data> edge_collection;
+
+    facets = make_surface_facets(face, data);
+
+    TopTools_IndexedMapOfShape edges;
+    TopExp::MapShapes(face, TopAbs_EDGE, edges);
+    for (int i = 1; i <= edges.Extent(); i++) {
+      const TopoDS_Edge &currentEdge = TopoDS::Edge(edges(i));
+      // make the edge facets
+      edge_data edges = make_edge_facets(currentEdge, data);
+      edge_collection.push_back(edges);
+    }
+
+    if (facets.coords.empty())
       n_surfaces_without_facets++;
     else
-      mbtool.add_facets_and_curves_to_surface(surface, data.facets, data.edge_collection);
+      mbtool.add_facets_and_curves_to_surface(surface, facets, edge_collection);
   }
 
   if (n_surfaces_without_facets > 0) {

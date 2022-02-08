@@ -274,54 +274,50 @@ moab::ErrorCode MBTool::add_facets_to_surface(moab::EntityHandle surface,
   return rval;
 }
 
+moab::ErrorCode MBTool::add_curve_to_surface(moab::EntityHandle surface,
+  moab::EntityHandle curve) {
+    return mbi->add_parent_child(surface,curve);
+}
+
 // add curves to surface
-moab::ErrorCode MBTool::add_curves_to_surface(moab::EntityHandle surface,
-  std::vector<edge_data> edge_collection, const facet_vertex_map& vertex_map) {
-   
-   moab::ErrorCode rval;
+moab::ErrorCode MBTool::build_curve(moab::EntityHandle curve,
+  edge_data edge_collection_i, const facet_vertex_map& vertex_map) {
+  
+  moab::ErrorCode rval;
 
-   for ( int i = 0 ; i < edge_collection.size() ; i++ ) {
-     
-     moab::Range edges;
-     moab::Range vertices;
+  moab::Range edges;
+  moab::Range vertices;
 
-     moab::EntityHandle curve;
-     // construct an entity set for the curve
-     rval = make_new_curve(curve);
-     
-     int end_point = 0;
-     (edge_collection[i].connectivity.size() - 2  == 0 ) ?
-     (end_point = edge_collection[i].connectivity.size() - 1) :
-     (end_point = edge_collection[i].connectivity.size() - 2); 
+  int end_point = 0;
+  (edge_collection_i.connectivity.size() - 2  == 0 ) ?
+  (end_point = edge_collection_i.connectivity.size() - 1) :
+  (end_point = edge_collection_i.connectivity.size() - 2); 
 
-     moab::EntityHandle connection[2];
-     connection[1] = vertex_map.at(edge_collection[i].connectivity[0]);
-     vertices.insert(connection[1]);
-     rval = mbi->add_parent_child(curve,connection[1]);
+  moab::EntityHandle connection[2];
+  connection[1] = vertex_map.at(edge_collection_i.connectivity[0]);
+  vertices.insert(connection[1]);
+  rval = mbi->add_parent_child(curve,connection[1]);
 
-     for ( int j = 0 ; j < end_point ; j++ ) {
+  for ( int j = 0 ; j < end_point ; j++ ) {
 
-       connection[0] = connection[1];
-       connection[1] = vertex_map.at(edge_collection[i].connectivity[j+1]);
-       vertices.insert(connection[1]);
-       rval = mbi->add_parent_child(curve,connection[1]);
+    connection[0] = connection[1];
+    connection[1] = vertex_map.at(edge_collection_i.connectivity[j+1]);
+    vertices.insert(connection[1]);
+    rval = mbi->add_parent_child(curve,connection[1]);
 
-       moab::EntityHandle h;
-       rval = mbi->create_element(moab::MBEDGE, connection, 2, h);
-       edges.insert(h);
-     }
+    moab::EntityHandle h;
+    rval = mbi->create_element(moab::MBEDGE, connection, 2, h);
+    edges.insert(h);
+  }
 
-     // if curve is closed, remove duplicate vertex
-     if (vertices.front() == vertices.back())
-       vertices.pop_back();
+  // if curve is closed, remove duplicate vertex
+  if (vertices.front() == vertices.back())
+    vertices.pop_back();
 
-     // add vertices and edges to curve, and curve to surface
-     rval = mbi->add_entities(curve,vertices);
-     rval = mbi->add_entities(curve,edges);
-     rval = mbi->add_parent_child(surface,curve);
-   }
-   // Note: not adding edges to the surface set, to be consistent with the Cubit-Plugin
-   return rval;
+  // add vertices and edges to curve, and curve to surface
+  rval = mbi->add_entities(curve,vertices);
+  rval = mbi->add_entities(curve,edges);
+  return rval;
 }
 
 // write the geometry

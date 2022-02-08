@@ -176,23 +176,26 @@ void facet_all_volumes(const TopTools_HSequenceOfShape &shape_list,
     // make facets for current face
     facet_data facets = make_surface_facets(face, data);
 
-    std::vector<edge_data> edge_collection;
-    TopTools_IndexedMapOfShape edges;
-    TopExp::MapShapes(face, TopAbs_EDGE, edges);
-    for (int i = 1; i <= edges.Extent(); i++) {
-      const TopoDS_Edge &currentEdge = TopoDS::Edge(edges(i));
-      // make the edge facets
-      edge_data edges = make_edge_facets(currentEdge, data);
-      edge_collection.push_back(edges);
-    }
-
     if (facets.coords.empty())
       n_surfaces_without_facets++;
     else {
       facet_vertex_map vertex_map;
       mbtool.generate_facet_vertex_map(vertex_map, facets);
       mbtool.add_facets_to_surface(surface, facets, vertex_map);
-      mbtool.add_curves_to_surface(surface, edge_collection, vertex_map);
+
+      // add curves to surface
+      TopTools_IndexedMapOfShape edges;
+      TopExp::MapShapes(face, TopAbs_EDGE, edges);
+      for (int i = 1; i <= edges.Extent(); i++) {
+        const TopoDS_Edge &currentEdge = TopoDS::Edge(edges(i));
+        // make the edge facets
+        edge_data edges = make_edge_facets(currentEdge, data);
+
+        moab::EntityHandle curve;
+        mbtool.make_new_curve(curve);
+        mbtool.build_curve(curve, edges, vertex_map);
+        mbtool.add_curve_to_surface(surface, curve);
+      }
     }
   }
 

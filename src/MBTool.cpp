@@ -163,13 +163,13 @@ moab::ErrorCode MBTool::add_mat_ids() {
   return rval;
 }
 
-moab::ErrorCode MBTool::add_surface_to_volume(moab::EntityHandle surface,
+// add surfaces to volumes, or curves to surfaces
+moab::ErrorCode MBTool::add_child_to_parent(moab::EntityHandle surface,
           moab::EntityHandle volume, int sense) {
   moab::ErrorCode rval;
   rval = mbi->add_parent_child(volume, surface);
   MB_CHK_ERR(rval);
-  rval = geom_tool->set_sense(surface, volume, sense);
-  return rval;
+  return geom_tool->set_sense(surface, volume, sense);
 }
 
 //  makes a new surface in moab
@@ -272,11 +272,6 @@ moab::ErrorCode MBTool::add_facets_to_surface(moab::EntityHandle surface,
   }
   */
   return rval;
-}
-
-moab::ErrorCode MBTool::add_curve_to_surface(moab::EntityHandle surface,
-  moab::EntityHandle curve) {
-    return mbi->add_parent_child(surface,curve);
 }
 
 // add curves to surface

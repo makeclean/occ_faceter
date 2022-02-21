@@ -129,7 +129,7 @@ void facet_all_volumes(const TopTools_HSequenceOfShape &shape_list,
   MapFaceToSurface surfaceMap;
   MapEdgeToCurve edgeMap;
 
-  // list unique faces, create empty surfaces, and build edge and surface maps
+  // list unique faces, create empty surfaces, and build surface map
 
   // Important note: For the maps, edge/face equivalence is defined
   // by TopoDS_Shape::IsSame(), which ignores the orientation.
@@ -144,15 +144,6 @@ void facet_all_volumes(const TopTools_HSequenceOfShape &shape_list,
       moab::EntityHandle surface;
       mbtool.make_new_surface(surface);
       surfaceMap.Add(face, surface);
-    }
-    for (TopExp_Explorer ex(shape, TopAbs_EDGE); ex.More(); ex.Next()) {
-      const TopoDS_Edge &edge = TopoDS::Edge(ex.Current());
-      if (edgeMap.Contains(edge))
-        continue;
-
-      moab::EntityHandle curve;
-      mbtool.make_new_curve(curve);
-      edgeMap.Add(edge, curve);
     }
   }
 
@@ -188,13 +179,17 @@ void facet_all_volumes(const TopTools_HSequenceOfShape &shape_list,
       TopExp::MapShapes(face, TopAbs_EDGE, edges);
       for (int i = 1; i <= edges.Extent(); i++) {
         const TopoDS_Edge &currentEdge = TopoDS::Edge(edges(i));
-        // make the edge facets
-        edge_data edges = make_edge_facets(currentEdge, data);
 
         moab::EntityHandle curve;
-        mbtool.make_new_curve(curve);
-        mbtool.build_curve(curve, edges, vertex_map);
-        mbtool.add_curve_to_surface(surface, curve);
+        if (!edgeMap.FindFromKey(currentEdge, curve)) {
+          mbtool.make_new_curve(curve);
+          edgeMap.Add(currentEdge, curve);
+
+          edge_data edges = make_edge_facets(currentEdge, data);
+          mbtool.build_curve(curve, edges, vertex_map);
+        }
+        int sense = currentEdge.Orientation() == TopAbs_REVERSED ? moab::SENSE_REVERSE : moab::SENSE_FORWARD;
+        mbtool.add_child_to_parent(curve, surface, sense);
       }
     }
   }
@@ -218,7 +213,7 @@ void facet_all_volumes(const TopTools_HSequenceOfShape &shape_list,
       const TopoDS_Face &face = TopoDS::Face(ex.Current());
       moab::EntityHandle surface = surfaceMap.FindFromKey(face);
       int sense = face.Orientation() == TopAbs_REVERSED ? moab::SENSE_REVERSE : moab::SENSE_FORWARD;
-      mbtool.add_surface_to_volume(surface, vol, sense);
+      mbtool.add_child_to_parent(surface, vol, sense);
     }
 
     // update map from material name to volumes

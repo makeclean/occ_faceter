@@ -41,12 +41,10 @@ public:
   void generate_facet_vertex_map(facet_vertex_map& vertex_map, facet_data facetData);
   moab::ErrorCode add_facets_to_surface(moab::EntityHandle surface,
 						    facet_data facetData, const facet_vertex_map& vertex_map);
-  moab::ErrorCode add_curve_to_surface(moab::EntityHandle surface,
-                                       moab::EntityHandle curve);
   moab::ErrorCode build_curve(moab::EntityHandle curve, edge_data edge,
                               const facet_vertex_map& vertex_map);
-  moab::ErrorCode add_surface_to_volume(moab::EntityHandle surface,
-          moab::EntityHandle volume, int sense);
+  moab::ErrorCode add_child_to_parent(moab::EntityHandle child,
+          moab::EntityHandle parent, int sense);
   moab::ErrorCode add_group(const std::string &name,
                             const std::vector<moab::EntityHandle> &entities);
   moab::ErrorCode add_mat_ids();

@@ -33,11 +33,13 @@ public:
 
   moab::ErrorCode set_tags();
   moab::ErrorCode make_new_volume(moab::EntityHandle &volume);
+  moab::ErrorCode make_new_surface(moab::EntityHandle &surface);
+  moab::ErrorCode make_new_curve(moab::EntityHandle &curve);
+
   void write_geometry(std::string filename);
 
   void summarise();
   
-  moab::ErrorCode make_new_surface(moab::EntityHandle &surface);
   void generate_facet_vertex_map(facet_vertex_map& vertex_map, facet_data facetData);
   moab::ErrorCode add_facets_to_surface(moab::EntityHandle surface,
 						    facet_data facetData, const facet_vertex_map& vertex_map);
@@ -53,12 +55,7 @@ public:
                                             const int dimension,
                                             std::vector<moab::EntityHandle> &entities,
                                             const bool recursive) const;
-  moab::ErrorCode make_new_curve(moab::EntityHandle &curve);
 private:
-  moab::ErrorCode check_vertex_exists(std::array<double,3> coord, moab::EntityHandle &tVertex);
-  moab::ErrorCode add_facets_to_surface(moab::EntityHandle,
-					facet_data facetData);
-  private:
   moab::Core *mbi;
   VertexInserter::VertexInserter *vi;
   moab::GeomTopoTool *geom_tool;

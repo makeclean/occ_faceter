@@ -203,18 +203,6 @@ moab::ErrorCode MBTool::make_new_curve(moab::EntityHandle &curve) {
   return moab::MB_SUCCESS;  
 }
 
-// check for the existence of a vertex, if it exists return the eh otherwise
-// create a new one 
-moab::ErrorCode MBTool::check_vertex_exists(std::array<double,3> coord,
-					    moab::EntityHandle &tVertex) {
-  // get the vertices
-  tVertex = 0;
-
-  moab::ErrorCode rval = moab::MB_FAILURE;
-  rval = vi->insert_vertex(coord,tVertex);
-  return rval;
-}
-
 void MBTool::generate_facet_vertex_map(facet_vertex_map& vertex_map, facet_data facetData) {
   vertex_map.clear();
 
@@ -222,7 +210,9 @@ void MBTool::generate_facet_vertex_map(facet_vertex_map& vertex_map, facet_data 
   int idx = 1; // index start at 1!!
   for ( std::array<double,3> coord : facetData.coords ) {
     moab::EntityHandle vert;
-    moab::ErrorCode rval = check_vertex_exists(coord, vert);
+    // check for the existence of a vertex, and create a new one if necessary
+    moab::ErrorCode rval = vi->insert_vertex(coord,vert);
+
     vertex_map[idx] = vert;
     idx++;
   }

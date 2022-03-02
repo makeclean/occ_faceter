@@ -57,11 +57,6 @@ facet_data make_surface_facets(const TopoDS_Face &currentFace,
   Handle(Poly_Triangulation) triangles = facetData.triangulation;
   const gp_Trsf &local_transform = facetData.loc;
 
-  if (triangles.IsNull()) {
-    // std::cout << "No facets for surface" << std::endl;
-    return facets_for_moab;
-  }
-
   // retrieve facet data
   for (int i = 1; i <= triangles->NbNodes(); i++) {
     Standard_Real x, y, z;
@@ -168,12 +163,11 @@ void facet_all_volumes(const TopTools_HSequenceOfShape &shape_list,
     TriangulationWithLocation data;
     data.triangulation = BRep_Tool::Triangulation(face, data.loc);
 
-    // make facets for current face
-    facet_data facets = make_surface_facets(face, data);
-
-    if (facets.coords.empty())
+    if (data.triangulation.IsNull() || data.triangulation->NbNodes() < 1) {
       n_surfaces_without_facets++;
-    else {
+    } else {
+      // make facets for current face
+      facet_data facets = make_surface_facets(face, data);
       facet_vertex_map vertex_map;
       mbtool.generate_facet_vertex_map(vertex_map, facets.coords);
       mbtool.add_facets_to_surface(surface, facets.connectivity, vertex_map);

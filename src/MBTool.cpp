@@ -19,10 +19,9 @@ MBTool::MBTool() {
     // new vertex inserter
     vi = new VertexInserter::VertexInserter(mbi,1.e-6); // should pass the
                                         // tolernace by arg  
-    groupID = 0;
-    volID = 0;
-    surfID = 0;
-    curveID = 0;
+    for (int i = 0; i < 5; i++) {
+      entity_id[i] = 0;
+    }
     degenerate_triangle_count = 0;
 
     // make a new meshset to put stuff in
@@ -81,36 +80,42 @@ moab::ErrorCode MBTool::set_tags() {
   return moab::MB_SUCCESS;
 }
 
-// make a new volume meshset 
-moab::ErrorCode MBTool::make_new_volume(moab::EntityHandle &volume) {
-  volID++;
+moab::ErrorCode MBTool::create_entity_set(moab::EntityHandle &entity, int dim) {
+  // TODO: Check meshset options - Cubit-plugin has different behaviour
+  unsigned int options = (dim == 2 || dim == 3) ? moab::MESHSET_ORDERED : moab::MESHSET_SET;
+  moab::ErrorCode rval = mbi->create_meshset(options, entity);
+  MB_CHK_ERR(rval);
 
-  // std::cout << "Created new volume " << volID << std::endl;
-  
-  // make a new volume set
-  moab::ErrorCode rval = mbi->create_meshset(moab::MESHSET_ORDERED,volume);
-  // set the id tag
-  rval = mbi->tag_set_data(id_tag,&volume,1,&volID);
-  // set the dim tag
-  int dim = 3;
-  rval = mbi->tag_set_data(geometry_dimension_tag,&volume,1,&dim);
-  rval = mbi->tag_set_data(category_tag,&volume,1,&geom_categories[dim]);
-  return rval;
+  entity_id[dim]++;
+  rval = mbi->tag_set_data(id_tag,&entity,1,&entity_id[dim]);
+  MB_CHK_ERR(rval);
+
+  if (dim <= 3) {
+    rval = mbi->tag_set_data(geometry_dimension_tag,&entity,1,&dim);
+    MB_CHK_ERR(rval);
+  }
+
+  return mbi->tag_set_data(category_tag,&entity,1,&geom_categories[dim]);
+}
+
+moab::ErrorCode MBTool::make_new_volume(moab::EntityHandle &volume) {
+  return create_entity_set(volume, 3);
+}
+
+moab::ErrorCode MBTool::make_new_surface(moab::EntityHandle &surface) {
+  return create_entity_set(surface, 2);
+}
+
+moab::ErrorCode MBTool::make_new_curve(moab::EntityHandle &curve) {
+  return create_entity_set(curve, 1);
 }
 
 // add a new group (for materials)
 moab::ErrorCode MBTool::add_group(const std::string &name,
                                   const std::vector<moab::EntityHandle> &entities) {
-  groupID++;
   moab::ErrorCode rval;
   moab::EntityHandle group;
-  rval = mbi->create_meshset(moab::MESHSET_SET, group);
-  if (moab::MB_SUCCESS != rval) return rval;
-
-  rval = mbi->tag_set_data(id_tag, &group, 1, &groupID);
-  if (moab::MB_SUCCESS != rval) return rval;
-
-  rval = mbi->tag_set_data(category_tag, &group, 1, &geom_categories[4]);
+  rval = create_entity_set(group, 4);
   if (moab::MB_SUCCESS != rval) return rval;
 
   char namebuf[NAME_TAG_SIZE];
@@ -176,37 +181,6 @@ moab::ErrorCode MBTool::add_child_to_parent(moab::EntityHandle surface,
   rval = mbi->add_parent_child(volume, surface);
   MB_CHK_ERR(rval);
   return geom_tool->set_sense(surface, volume, sense);
-}
-
-//  makes a new surface in moab
-moab::ErrorCode MBTool::make_new_surface(moab::EntityHandle &surface) {
-  surfID++;
-  //  moab::EntityHandle surface;
-  // std::cout << "Created new surface " << surfID << std::endl;
-  
-  moab::ErrorCode rval = mbi->create_meshset(moab::MESHSET_ORDERED, surface);
-  // set the id tag
-  rval = mbi->tag_set_data(id_tag,&surface,1,&surfID);
-  // set the dim tag
-  int dim = 2;
-  rval = mbi->tag_set_data(geometry_dimension_tag,&surface,1,&dim);
-  rval = mbi->tag_set_data(category_tag,&surface,1,&geom_categories[dim]);
-  return moab::MB_SUCCESS;  
-}
-
-//  makes a new curve in moab
-moab::ErrorCode MBTool::make_new_curve(moab::EntityHandle &curve) {
-  curveID++;
-  //  moab::EntityHandle surface;
-  moab::ErrorCode rval = mbi->create_meshset(moab::MESHSET_SET, curve);
-  // set the id tag
-  rval = mbi->tag_set_data(id_tag,&curve,1,&curveID);
-  // set the dim tag
-  int dim = 1;
-  rval = mbi->tag_set_data(geometry_dimension_tag,&curve,1,&dim);
-  // set the name of the meshet
-  rval = mbi->tag_set_data(category_tag, &curve, 1, &geom_categories[dim]);
-  return moab::MB_SUCCESS;  
 }
 
 void MBTool::generate_facet_vertex_map(facet_vertex_map& vertex_map,

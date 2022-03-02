@@ -59,13 +59,12 @@ public:
                                             std::vector<moab::EntityHandle> &entities,
                                             const bool recursive) const;
 private:
+  moab::ErrorCode create_entity_set(moab::EntityHandle &entit, int dim);
+
   moab::Core *mbi;
   VertexInserter::VertexInserter *vi;
   moab::GeomTopoTool *geom_tool;
-  int groupID;
-  int volID;
-  int surfID;
-  int curveID;
+  int entity_id[5]; // group, volume, surface, curve IDs (indexed by dim)
   int degenerate_triangle_count;
   moab::EntityHandle rootset;
   moab::Tag geometry_dimension_tag, id_tag;

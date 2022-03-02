@@ -50,7 +50,8 @@ struct TriangulationWithLocation {
   Handle(Poly_Triangulation) triangulation;
 };
 
-facet_data make_surface_facets(const TopoDS_Face &currentFace, const TriangulationWithLocation &facetData) {
+facet_data make_surface_facets(const TopoDS_Face &currentFace,
+                               const TriangulationWithLocation &facetData) {
   facet_data facets_for_moab;
 
   Handle(Poly_Triangulation) triangles = facetData.triangulation;
@@ -174,8 +175,8 @@ void facet_all_volumes(const TopTools_HSequenceOfShape &shape_list,
       n_surfaces_without_facets++;
     else {
       facet_vertex_map vertex_map;
-      mbtool.generate_facet_vertex_map(vertex_map, facets);
-      mbtool.add_facets_to_surface(surface, facets, vertex_map);
+      mbtool.generate_facet_vertex_map(vertex_map, facets.coords);
+      mbtool.add_facets_to_surface(surface, facets.connectivity, vertex_map);
 
       // add curves to surface
       TopTools_IndexedMapOfShape edges;

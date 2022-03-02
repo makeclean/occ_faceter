@@ -14,10 +14,13 @@ namespace moab {
 class GeomTopoTool;
 }
 
+typedef std::vector<std::array<double,3>> facet_coords;
+typedef std::vector<std::array<int, 3>> facet_connectivity;
+
 // convenient return for facets
 struct facet_data {
-  std::vector<std::array<double,3> > coords;
-  std::vector<std::array<int, 3> > connectivity;
+  facet_coords coords;
+  facet_connectivity connectivity;
 };
 
 struct edge_data {
@@ -38,9 +41,11 @@ public:
 
   void write_geometry(std::string filename);
 
-  void generate_facet_vertex_map(facet_vertex_map& vertex_map, facet_data facetData);
+  void generate_facet_vertex_map(facet_vertex_map& vertex_map,
+                                 const facet_coords& coords);
   moab::ErrorCode add_facets_to_surface(moab::EntityHandle surface,
-						    facet_data facetData, const facet_vertex_map& vertex_map);
+                                        const facet_connectivity& connectivity_list,
+                                        const facet_vertex_map& vertex_map);
   moab::ErrorCode build_curve(moab::EntityHandle curve, edge_data edge,
                               const facet_vertex_map& vertex_map);
   moab::ErrorCode add_child_to_parent(moab::EntityHandle child,

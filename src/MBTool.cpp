@@ -202,12 +202,13 @@ moab::ErrorCode MBTool::make_new_curve(moab::EntityHandle &curve) {
   return moab::MB_SUCCESS;  
 }
 
-void MBTool::generate_facet_vertex_map(facet_vertex_map& vertex_map, facet_data facetData) {
+void MBTool::generate_facet_vertex_map(facet_vertex_map& vertex_map,
+                                       const facet_coords& coords) {
   vertex_map.clear();
 
   // for each coordinate in the surface make the moab vertex
   int idx = 1; // index start at 1!!
-  for ( std::array<double,3> coord : facetData.coords ) {
+  for ( std::array<double,3> coord : coords ) {
     moab::EntityHandle vert;
     // check for the existence of a vertex, and create a new one if necessary
     moab::ErrorCode rval = vi->insert_vertex(coord,vert);
@@ -219,7 +220,7 @@ void MBTool::generate_facet_vertex_map(facet_vertex_map& vertex_map, facet_data 
 
 // add facets to surface
 moab::ErrorCode MBTool::add_facets_to_surface(moab::EntityHandle surface,
-  facet_data facetData, const facet_vertex_map& vertex_map) {
+  const facet_connectivity& connectivity_list, const facet_vertex_map& vertex_map) {
 
   moab::Range vertices;
   for (auto const & pair : vertex_map) {
@@ -228,7 +229,7 @@ moab::ErrorCode MBTool::add_facets_to_surface(moab::EntityHandle surface,
   moab::ErrorCode rval = mbi->add_entities(surface, vertices);
 
   moab::Range triangles;
-  for ( std::array<int,3> connectivity : facetData.connectivity) {
+  for ( std::array<int,3> connectivity : connectivity_list) {
     moab::EntityHandle tri;
     moab::EntityHandle connections[3];
     connections[0] = vertex_map.at(connectivity[0]);

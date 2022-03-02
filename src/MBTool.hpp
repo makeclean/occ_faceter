@@ -71,6 +71,5 @@ private:
   moab::Tag vol_id_tag, surf_id_tag; // tags for triangles for plotting
   moab::Tag name_tag;
   moab::Tag mat_id_tag;
-  moab::Range existing_vertices;
 };
 #endif // MBTOOL_HPP

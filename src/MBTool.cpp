@@ -24,7 +24,6 @@ MBTool::MBTool() {
     surfID = 0;
     curveID = 0;
     degenerate_triangle_count = 0;
-    existing_vertices.clear();
     // make a new meshset to put stuff in
     moab::ErrorCode rval = mbi->create_meshset(moab::MESHSET_SET, rootset);
     rval = mbi->tag_get_handle(GEOM_DIMENSION_TAG_NAME, 1, moab::MB_TYPE_INTEGER, geometry_dimension_tag, moab::MB_TAG_DENSE | moab::MB_TAG_CREAT);

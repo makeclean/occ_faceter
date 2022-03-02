@@ -24,33 +24,40 @@ MBTool::MBTool() {
     surfID = 0;
     curveID = 0;
     degenerate_triangle_count = 0;
+
     // make a new meshset to put stuff in
     moab::ErrorCode rval = mbi->create_meshset(moab::MESHSET_SET, rootset);
-    rval = mbi->tag_get_handle(GEOM_DIMENSION_TAG_NAME, 1, moab::MB_TYPE_INTEGER, geometry_dimension_tag, moab::MB_TAG_DENSE | moab::MB_TAG_CREAT);
+
+    // create tags
+    rval = mbi->tag_get_handle(GEOM_DIMENSION_TAG_NAME, 1, moab::MB_TYPE_INTEGER,
+                               geometry_dimension_tag, moab::MB_TAG_DENSE | moab::MB_TAG_CREAT);
     MB_CHK_SET_ERR_RET(rval, "Couldnt get geom dim tag");
-    rval = mbi->tag_get_handle(GLOBAL_ID_TAG_NAME, 1, moab::MB_TYPE_INTEGER, id_tag, moab::MB_TAG_DENSE | moab::MB_TAG_CREAT);
+
+    rval = mbi->tag_get_handle(GLOBAL_ID_TAG_NAME, 1, moab::MB_TYPE_INTEGER,
+                               id_tag, moab::MB_TAG_DENSE | moab::MB_TAG_CREAT);
     MB_CHK_SET_ERR_RET(rval, "Couldnt get id tag");
+
+    rval = mbi->tag_get_handle(NAME_TAG_NAME, NAME_TAG_SIZE, moab::MB_TYPE_OPAQUE,
+                               name_tag, moab::MB_TAG_SPARSE | moab::MB_TAG_CREAT);
+    MB_CHK_SET_ERR_RET(rval, "Error creating name_tag");
+
+    rval = mbi->tag_get_handle(CATEGORY_TAG_NAME, CATEGORY_TAG_SIZE, moab::MB_TYPE_OPAQUE, 
+                               category_tag, moab::MB_TAG_SPARSE | moab::MB_TAG_CREAT);
+    MB_CHK_SET_ERR_RET(rval, "Error creating category_tag");
+
+    rval = mbi->tag_get_handle("FACETING_TOL", 1, moab::MB_TYPE_DOUBLE, faceting_tol_tag,
+                               moab::MB_TAG_SPARSE | moab::MB_TAG_CREAT);
+    MB_CHK_SET_ERR_RET(rval, "Error creating faceting_tol_tag");
+
+    rval = mbi->tag_get_handle("GEOMETRY_RESABS", 1, moab::MB_TYPE_DOUBLE, 
+                               geometry_resabs_tag, moab::MB_TAG_SPARSE | moab::MB_TAG_CREAT);
+    MB_CHK_SET_ERR_RET(rval, "Error creating geometry_resabs_tag");
 
     rval = mbi->tag_get_handle("VOL_ID", 1, moab::MB_TYPE_INTEGER, vol_id_tag, moab::MB_TAG_DENSE | moab::MB_TAG_CREAT);
     MB_CHK_SET_ERR_RET(rval, "Couldnt get vol_id tag");
 
     rval = mbi->tag_get_handle("SURF_ID", 1, moab::MB_TYPE_INTEGER, surf_id_tag, moab::MB_TAG_DENSE | moab::MB_TAG_CREAT);
     MB_CHK_SET_ERR_RET(rval, "Couldnt get surf_id tag");
-    
-    rval = mbi->tag_get_handle("FACETING_TOL", 1, moab::MB_TYPE_DOUBLE, faceting_tol_tag,
-			       moab::MB_TAG_SPARSE | moab::MB_TAG_CREAT);
-    MB_CHK_SET_ERR_RET(rval, "Error creating faceting_tol_tag");
-    rval = mbi->tag_get_handle("GEOMETRY_RESABS", 1, moab::MB_TYPE_DOUBLE, 
-			       geometry_resabs_tag, moab::MB_TAG_SPARSE | moab::MB_TAG_CREAT);
-    MB_CHK_SET_ERR_RET(rval, "Error creating geometry_resabs_tag");
-    
-    rval = mbi->tag_get_handle(CATEGORY_TAG_NAME, CATEGORY_TAG_SIZE, moab::MB_TYPE_OPAQUE, 
-    			       category_tag, moab::MB_TAG_SPARSE | moab::MB_TAG_CREAT);
-    MB_CHK_SET_ERR_RET(rval, "Error creating category_tag");
-
-    rval = mbi->tag_get_handle(NAME_TAG_NAME, NAME_TAG_SIZE, moab::MB_TYPE_OPAQUE,
-                               name_tag, moab::MB_TAG_SPARSE | moab::MB_TAG_CREAT);
-    MB_CHK_SET_ERR_RET(rval, "Error creating name_tag");
 
     rval = mbi->tag_get_handle("MatID", 1, moab::MB_TYPE_INTEGER,
                                mat_id_tag, moab::MB_TAG_DENSE | moab::MB_TAG_CREAT);

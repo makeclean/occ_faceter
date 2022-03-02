@@ -38,8 +38,6 @@ public:
 
   void write_geometry(std::string filename);
 
-  void summarise();
-  
   void generate_facet_vertex_map(facet_vertex_map& vertex_map, facet_data facetData);
   moab::ErrorCode add_facets_to_surface(moab::EntityHandle surface,
 						    facet_data facetData, const facet_vertex_map& vertex_map);

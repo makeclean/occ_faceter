@@ -91,6 +91,11 @@ edge_data make_edge_facets(const TopoDS_Edge &currentEdge,
   Handle(Poly_PolygonOnTriangulation) edges =
       BRep_Tool::PolygonOnTriangulation(currentEdge, facetData.triangulation, facetData.loc);
 
+  if (edges.IsNull()) {
+    std::cout << "Warning: Unexpected null edges." << std::endl;
+    return edges_for_moab;
+  }
+
   // convert TColStd_Array1OfInteger to std::vector<int>
   std::vector<int> &conn = edges_for_moab.connectivity;
   const TColStd_Array1OfInteger &lines = edges->Nodes();
@@ -168,9 +173,10 @@ void facet_all_volumes(const TopTools_HSequenceOfShape &shape_list,
     } else {
       // make facets for current face
       facet_data facets = make_surface_facets(face, data);
-      facet_vertex_map vertex_map;
-      mbtool.generate_facet_vertex_map(vertex_map, facets.coords);
-      mbtool.add_facets_to_surface(surface, facets.connectivity, vertex_map);
+      facet_vertex_map f_vertex_map;
+      moab::ErrorCode ret = mbtool.generate_facet_vertex_map(f_vertex_map, facets.coords);
+      assert(ret == moab::MB_SUCCESS);
+      mbtool.add_facets_to_surface(surface, facets.connectivity, f_vertex_map);
 
       // add curves to surface
       TopTools_IndexedMapOfShape edges;
@@ -184,7 +190,7 @@ void facet_all_volumes(const TopTools_HSequenceOfShape &shape_list,
           edgeMap.Add(currentEdge, curve);
 
           edge_data edges = make_edge_facets(currentEdge, data);
-          mbtool.build_curve(curve, edges, vertex_map);
+          mbtool.build_curve(curve, edges, f_vertex_map);
         }
         int sense = currentEdge.Orientation() == TopAbs_REVERSED ? moab::SENSE_REVERSE : moab::SENSE_FORWARD;
         mbtool.add_child_to_parent(curve, surface, sense);
@@ -290,5 +296,6 @@ void brep_faceter(std::string brep_file, std::string json_file,
   if (add_mat_ids)
     mbtool.add_mat_ids();
 
+  mbtool.gather_ents();
   mbtool.write_geometry(h5m_file.c_str());
 }

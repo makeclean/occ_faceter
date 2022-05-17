@@ -6,6 +6,7 @@
 
 #include <vector>
 #include <array>
+#include <map>
 
 #include "rtree/RTree.h"
 #include "vertex_inserter.hh"
@@ -16,6 +17,7 @@ class GeomTopoTool;
 
 typedef std::vector<std::array<double,3>> facet_coords;
 typedef std::vector<std::array<int, 3>> facet_connectivity;
+typedef std::map<moab::EntityHandle, moab::EntityHandle> ent_ent_map;
 
 // convenient return for facets
 struct facet_data {
@@ -27,7 +29,12 @@ struct edge_data {
   std::vector<int> connectivity;
 };
 
-typedef std::map<int,moab::EntityHandle> facet_vertex_map;
+struct facet_vertex_pair {
+  moab::EntityHandle vertex;
+  moab::EntityHandle set;
+};
+
+typedef std::map<int,facet_vertex_pair> facet_vertex_map;
 
 class MBTool {
 public:
@@ -38,11 +45,12 @@ public:
   moab::ErrorCode make_new_volume(moab::EntityHandle &volume);
   moab::ErrorCode make_new_surface(moab::EntityHandle &surface);
   moab::ErrorCode make_new_curve(moab::EntityHandle &curve);
+  moab::ErrorCode make_new_node(moab::EntityHandle &node);
 
   void write_geometry(std::string filename);
 
-  void generate_facet_vertex_map(facet_vertex_map& vertex_map,
-                                 const facet_coords& coords);
+  moab::ErrorCode generate_facet_vertex_map(facet_vertex_map& vertex_map,
+                                            const facet_coords& coords);
   moab::ErrorCode add_facets_to_surface(moab::EntityHandle surface,
                                         const facet_connectivity& connectivity_list,
                                         const facet_vertex_map& vertex_map);
@@ -58,11 +66,15 @@ public:
                                             const int dimension,
                                             std::vector<moab::EntityHandle> &entities,
                                             const bool recursive) const;
+  moab::ErrorCode gather_ents();
+
 private:
   moab::ErrorCode create_entity_set(moab::EntityHandle &entit, int dim);
 
   moab::Core *mbi;
   VertexInserter::VertexInserter *vi;
+  ent_ent_map vertex_to_set_map;
+
   moab::GeomTopoTool *geom_tool;
   int entity_id[5]; // group, volume, surface, curve IDs (indexed by dim)
   int degenerate_triangle_count;

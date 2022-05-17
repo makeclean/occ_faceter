@@ -110,6 +110,10 @@ moab::ErrorCode MBTool::make_new_curve(moab::EntityHandle &curve) {
   return create_entity_set(curve, 1);
 }
 
+moab::ErrorCode MBTool::make_new_node(moab::EntityHandle &node) {
+  return create_entity_set(node, 0);
+}
+
 // add a new group (for materials)
 moab::ErrorCode MBTool::add_group(const std::string &name,
                                   const std::vector<moab::EntityHandle> &entities) {
@@ -183,8 +187,8 @@ moab::ErrorCode MBTool::add_child_to_parent(moab::EntityHandle surface,
   return geom_tool->set_sense(surface, volume, sense);
 }
 
-void MBTool::generate_facet_vertex_map(facet_vertex_map& vertex_map,
-                                       const facet_coords& coords) {
+moab::ErrorCode MBTool::generate_facet_vertex_map(facet_vertex_map& vertex_map,
+                                                  const facet_coords& coords) {
   vertex_map.clear();
 
   // for each coordinate in the surface make the moab vertex
@@ -194,9 +198,34 @@ void MBTool::generate_facet_vertex_map(facet_vertex_map& vertex_map,
     // check for the existence of a vertex, and create a new one if necessary
     moab::ErrorCode rval = vi->insert_vertex(coord,vert);
 
-    vertex_map[idx] = vert;
+    moab::EntityHandle set;
+    if (rval == moab::MB_ENTITY_NOT_FOUND) {
+      // create a meshset for the new vertex
+      rval = make_new_node(set);
+      MB_CHK_ERR(rval);
+
+      moab::Range vertices;
+      vertices.insert(vert);
+      rval = mbi->add_entities(set, vertices);
+      MB_CHK_ERR(rval);
+
+      vertex_to_set_map[vert] = set;
+    } else {
+      // find the corresponding meshset
+      ent_ent_map::iterator it = vertex_to_set_map.find(vert);
+      if (vertex_to_set_map.end() == it) {
+        return moab::MB_ENTITY_NOT_FOUND;
+      }
+      set = it->second;
+    }
+
+    facet_vertex_pair v_pair;
+    v_pair.vertex = vert;
+    v_pair.set = set;
+    vertex_map[idx] = v_pair;
     idx++;
   }
+  return moab::MB_SUCCESS;
 }
 
 // add facets to surface
@@ -205,7 +234,7 @@ moab::ErrorCode MBTool::add_facets_to_surface(moab::EntityHandle surface,
 
   moab::Range vertices;
   for (auto const & pair : vertex_map) {
-    vertices.insert(pair.second);
+    vertices.insert(pair.second.vertex);
   }
   moab::ErrorCode rval = mbi->add_entities(surface, vertices);
 
@@ -213,9 +242,9 @@ moab::ErrorCode MBTool::add_facets_to_surface(moab::EntityHandle surface,
   for ( std::array<int,3> connectivity : connectivity_list) {
     moab::EntityHandle tri;
     moab::EntityHandle connections[3];
-    connections[0] = vertex_map.at(connectivity[0]);
-    connections[1] = vertex_map.at(connectivity[1]);
-    connections[2] = vertex_map.at(connectivity[2]);
+    connections[0] = vertex_map.at(connectivity[0]).vertex;
+    connections[1] = vertex_map.at(connectivity[1]).vertex;
+    connections[2] = vertex_map.at(connectivity[2]).vertex;
 
     if ( connections[2] == connections[1] ||
         connections[1] == connections[0] ||
@@ -249,6 +278,11 @@ moab::ErrorCode MBTool::add_facets_to_surface(moab::EntityHandle surface,
 moab::ErrorCode MBTool::build_curve(moab::EntityHandle curve,
   edge_data edge_collection_i, const facet_vertex_map& vertex_map) {
   
+  if (edge_collection_i.connectivity.empty()) {
+    std::cout << "Warning: Attempting to build empty curve." << std::endl;
+    return moab::ErrorCode::MB_FAILURE;
+  }
+
   moab::ErrorCode rval;
 
   moab::Range edges;
@@ -259,17 +293,19 @@ moab::ErrorCode MBTool::build_curve(moab::EntityHandle curve,
   (end_point = edge_collection_i.connectivity.size() - 1) :
   (end_point = edge_collection_i.connectivity.size() - 2); 
 
+  facet_vertex_pair v_pair = vertex_map.at(edge_collection_i.connectivity.at(0));
   moab::EntityHandle connection[2];
-  connection[1] = vertex_map.at(edge_collection_i.connectivity[0]);
-  vertices.insert(connection[1]);
-  rval = mbi->add_parent_child(curve,connection[1]);
+  connection[1] = v_pair.vertex;
+  vertices.insert(v_pair.vertex);
+  rval = mbi->add_parent_child(curve,v_pair.set);
 
   for ( int j = 0 ; j < end_point ; j++ ) {
 
     connection[0] = connection[1];
-    connection[1] = vertex_map.at(edge_collection_i.connectivity[j+1]);
-    vertices.insert(connection[1]);
-    rval = mbi->add_parent_child(curve,connection[1]);
+    v_pair = vertex_map.at(edge_collection_i.connectivity.at(j+1));
+    connection[1] = v_pair.vertex;
+    vertices.insert(v_pair.vertex);
+    rval = mbi->add_parent_child(curve,v_pair.set);
 
     moab::EntityHandle h;
     rval = mbi->create_element(moab::MBEDGE, connection, 2, h);
@@ -301,4 +337,17 @@ moab::ErrorCode MBTool::get_entities_by_dimension(const moab::EntityHandle meshs
                                                   std::vector<moab::EntityHandle> &entities,
                                                   const bool recursive) const {
   return mbi->get_entities_by_dimension(meshset, dimension, entities, recursive);
+}
+
+// add all entities to rootset
+moab::ErrorCode MBTool::gather_ents()
+{
+  std::cout << "ent counts: " << entity_id[0] << " " << entity_id[1]
+  << " " << entity_id[2] << " " << entity_id[3] << " " << entity_id[4] << std::endl;
+
+
+  moab::Range ents;
+  moab::ErrorCode rval = mbi->get_entities_by_handle(0, ents);
+  MB_CHK_ERR(rval);
+  return mbi->add_entities(rootset,ents);
 }

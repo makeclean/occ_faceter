@@ -289,8 +289,8 @@ void brep_faceter(std::string brep_file, std::string json_file,
   read_metadata(json_file, materials_map);
 
   MBTool mbtool;
-  // TODO: Use faceting tolerance value in set_tags and review use of GEOMETRY_RESABS
-  mbtool.set_tags();
+  // TODO: review use of GEOMETRY_RESABS
+  mbtool.set_faceting_tol_tag(facet_tol.tolerance);
   sew_and_facet(shape, facet_tol, mbtool, materials_map);
 
   if (add_mat_ids)

@@ -70,14 +70,14 @@ MBTool::~MBTool() {
     delete vi;
 }
 
-moab::ErrorCode MBTool::set_tags() {
+moab::ErrorCode MBTool::set_faceting_tol_tag(double faceting_tol) {
   moab::EntityHandle set = rootset; // ? *rootset : 0;
-  moab::ErrorCode rval;
-  double faceting_tol = 1.e-4;
-  double geom_tol = 1.e-6;
-  rval = mbi->tag_set_data(faceting_tol_tag, &set, 1, &faceting_tol);
-  rval = mbi->tag_set_data(geometry_resabs_tag, &set, 1, &geom_tol);
-  return moab::MB_SUCCESS;
+  return mbi->tag_set_data(faceting_tol_tag, &set, 1, &faceting_tol);
+}
+
+moab::ErrorCode MBTool::set_geometry_tol_tag(double geom_tol) {
+  moab::EntityHandle set = rootset; // ? *rootset : 0;
+  return mbi->tag_set_data(geometry_resabs_tag, &set, 1, &geom_tol);
 }
 
 moab::ErrorCode MBTool::create_entity_set(moab::EntityHandle &entity, int dim) {

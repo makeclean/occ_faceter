@@ -41,7 +41,8 @@ public:
   MBTool();
   ~MBTool();
 
-  moab::ErrorCode set_tags();
+  moab::ErrorCode set_faceting_tol_tag(double faceting_tol);
+  moab::ErrorCode set_geometry_tol_tag(double geom_tol);
   moab::ErrorCode make_new_volume(moab::EntityHandle &volume);
   moab::ErrorCode make_new_surface(moab::EntityHandle &surface);
   moab::ErrorCode make_new_curve(moab::EntityHandle &curve);

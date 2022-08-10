@@ -9,10 +9,10 @@
 
 TEST_CASE("Faceting BREP and writing to MOAB", "[faceter]") {
 
-  MBTool mbtool;
-  mbtool.set_tags();
-
   FacetingTolerance facet_tol(1.e-3);
+
+  MBTool mbtool;
+  mbtool.set_faceting_tol_tag(facet_tol.tolerance);
 
   const char *input_path = "gluedCompSolid.brep";
   const char *metadata_path = "gluedCompSolid_metadata.json";

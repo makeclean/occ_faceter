@@ -16,7 +16,7 @@ void steps2h5m(std::string input_file, const FacetingTolerance &facet_tol, std::
   json j = json::parse(std::ifstream(input_file));
 
   MBTool mbtool;
-  mbtool.set_tags();
+  mbtool.set_faceting_tol_tag(facet_tol.tolerance);
 
   for (const auto &p : j) {
     std::string step_file = p["filename"].get<std::string>();

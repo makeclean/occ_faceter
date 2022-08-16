@@ -15,6 +15,13 @@ namespace moab {
 class GeomTopoTool;
 }
 
+class mberror : public std::exception {
+public:
+  mberror(moab::ErrorCode error_code) : err(error_code) {}
+
+  moab::ErrorCode err;
+};
+
 typedef std::vector<std::array<double,3>> facet_coords;
 typedef std::vector<std::array<int, 3>> facet_connectivity;
 typedef std::map<moab::EntityHandle, moab::EntityHandle> ent_ent_map;
@@ -41,14 +48,14 @@ public:
   MBTool();
   ~MBTool();
 
-  moab::ErrorCode set_faceting_tol_tag(double faceting_tol);
-  moab::ErrorCode set_geometry_tol_tag(double geom_tol);
-  moab::ErrorCode make_new_volume(moab::EntityHandle &volume);
-  moab::ErrorCode make_new_surface(moab::EntityHandle &surface);
-  moab::ErrorCode make_new_curve(moab::EntityHandle &curve);
-  moab::ErrorCode make_new_node(moab::EntityHandle &node);
+  void set_faceting_tol_tag(double faceting_tol);
+  void set_geometry_tol_tag(double geom_tol);
+  moab::EntityHandle make_new_volume();
+  moab::EntityHandle make_new_surface();
+  moab::EntityHandle make_new_curve();
+  moab::EntityHandle make_new_node();
 
-  void write_geometry(std::string filename);
+  void write_geometry(const std::string &filename);
 
   moab::ErrorCode generate_facet_vertex_map(facet_vertex_map& vertex_map,
                                             const facet_coords& coords);
@@ -59,8 +66,8 @@ public:
                               const facet_vertex_map& vertex_map);
   moab::ErrorCode add_child_to_parent(moab::EntityHandle child,
           moab::EntityHandle parent, int sense);
-  moab::ErrorCode add_group(const std::string &name,
-                            const std::vector<moab::EntityHandle> &entities);
+  void add_group(const std::string &name,
+                 const std::vector<moab::EntityHandle> &entities);
   moab::ErrorCode add_mat_ids();
 
   moab::ErrorCode get_entities_by_dimension(const moab::EntityHandle meshset,
@@ -70,7 +77,7 @@ public:
   moab::ErrorCode gather_ents();
 
 private:
-  moab::ErrorCode create_entity_set(moab::EntityHandle &entit, int dim);
+  moab::EntityHandle create_entity_set(int dim);
 
   moab::Core *mbi;
   VertexInserter::VertexInserter *vi;

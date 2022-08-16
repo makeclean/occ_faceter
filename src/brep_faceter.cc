@@ -145,8 +145,7 @@ void facet_all_volumes(const TopTools_HSequenceOfShape &shape_list,
         continue;
 
       uniqueFaces.push_back(face);
-      moab::EntityHandle surface;
-      mbtool.make_new_surface(surface);
+      moab::EntityHandle surface = mbtool.make_new_surface();
       surfaceMap.Add(face, surface);
     }
   }
@@ -186,7 +185,7 @@ void facet_all_volumes(const TopTools_HSequenceOfShape &shape_list,
 
         moab::EntityHandle curve;
         if (!edgeMap.FindFromKey(currentEdge, curve)) {
-          mbtool.make_new_curve(curve);
+          curve = mbtool.make_new_curve();
           edgeMap.Add(currentEdge, curve);
 
           edge_data edges = make_edge_facets(currentEdge, data);
@@ -210,8 +209,7 @@ void facet_all_volumes(const TopTools_HSequenceOfShape &shape_list,
   for (int i = 1; i <= count; i++) {
     const TopoDS_Shape &shape = shape_list.Value(i);
 
-    moab::EntityHandle vol;
-    mbtool.make_new_volume(vol);
+    moab::EntityHandle vol = mbtool.make_new_volume();
 
     for (TopExp_Explorer ex(shape, TopAbs_FACE); ex.More(); ex.Next()) {
       const TopoDS_Face &face = TopoDS::Face(ex.Current());

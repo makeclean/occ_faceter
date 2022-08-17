@@ -30,18 +30,15 @@ TEST_CASE("Faceting BREP and writing to MOAB", "[faceter]") {
 
   sew_and_facet(shape, facet_tol, mbtool, materials_map);
 
-  std::vector<moab::EntityHandle> triangles;
-  moab::ErrorCode ret = mbtool.get_entities_by_dimension(0, 2, triangles, true);
-
-  REQUIRE(ret == moab::MB_SUCCESS);
-  REQUIRE(triangles.size() == 22);
+  std::vector<moab::EntityHandle> triangles = mbtool.get_entities_by_dimension(0, 2, true);
+  CHECK(triangles.size() == 22);
 
   mbtool.write_geometry(output_path);
 
   // pt_in_vol and ray_file tests
 
   moab::Core mbi;
-  ret = mbi.load_file(output_path);
+  moab::ErrorCode ret = mbi.load_file(output_path);
   REQUIRE(ret == moab::MB_SUCCESS);
 
   moab::GeomTopoTool gtt(&mbi);
@@ -57,17 +54,17 @@ TEST_CASE("Faceting BREP and writing to MOAB", "[faceter]") {
   double xyz[3] = {1.0, 1.0, 1.0};
   ret = gqt.point_in_volume(vol1, xyz, result);
   REQUIRE(ret == moab::MB_SUCCESS);
-  REQUIRE(result == 1);
+  CHECK(result == 1);
 
   ret = gqt.point_in_volume(vol2, xyz, result);
   REQUIRE(ret == moab::MB_SUCCESS);
-  REQUIRE(result == 0);
+  CHECK(result == 0);
 
   xyz[0] = 11;
   result = 0;
   ret = gqt.point_in_volume(vol2, xyz, result);
   REQUIRE(ret == moab::MB_SUCCESS);
-  REQUIRE(result == 1);
+  CHECK(result == 1);
 
   double start[3] = {1.0, 1.0, 1.0};
   double next_surf_dist;
@@ -75,5 +72,5 @@ TEST_CASE("Faceting BREP and writing to MOAB", "[faceter]") {
   double dir[3] = {-1.0, 0.0, 0.0};
   ret = gqt.ray_fire(vol1, start, dir, next_surf, next_surf_dist);
   REQUIRE(ret == moab::MB_SUCCESS);
-  REQUIRE(next_surf_dist == 1.0);
+  CHECK(next_surf_dist == 1.0);
 }

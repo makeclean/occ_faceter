@@ -15,11 +15,12 @@ namespace moab {
 class GeomTopoTool;
 }
 
-class mberror : public std::exception {
+class mberror : public std::runtime_error {
 public:
-  mberror(moab::ErrorCode error_code) : err(error_code) {}
+  mberror(moab::ErrorCode error_code, const char* what)
+    : error_code(error_code), std::runtime_error(what) {}
 
-  moab::ErrorCode err;
+  moab::ErrorCode error_code;
 };
 
 typedef std::vector<std::array<double,3>> facet_coords;
@@ -57,24 +58,23 @@ public:
 
   void write_geometry(const std::string &filename);
 
-  moab::ErrorCode generate_facet_vertex_map(facet_vertex_map& vertex_map,
-                                            const facet_coords& coords);
-  moab::ErrorCode add_facets_to_surface(moab::EntityHandle surface,
-                                        const facet_connectivity& connectivity_list,
-                                        const facet_vertex_map& vertex_map);
-  moab::ErrorCode build_curve(moab::EntityHandle curve, edge_data edge,
+  void generate_facet_vertex_map(facet_vertex_map& vertex_map,
+                                 const facet_coords& coords);
+  void add_facets_to_surface(moab::EntityHandle surface,
+                             const facet_connectivity& connectivity_list,
+                             const facet_vertex_map& vertex_map);
+  void build_curve(moab::EntityHandle curve, edge_data edge,
                               const facet_vertex_map& vertex_map);
-  moab::ErrorCode add_child_to_parent(moab::EntityHandle child,
-          moab::EntityHandle parent, int sense);
+  void add_child_to_parent(moab::EntityHandle child,
+                           moab::EntityHandle parent, int sense);
   void add_group(const std::string &name,
                  const std::vector<moab::EntityHandle> &entities);
-  moab::ErrorCode add_mat_ids();
+  void add_mat_ids();
 
-  moab::ErrorCode get_entities_by_dimension(const moab::EntityHandle meshset,
-                                            const int dimension,
-                                            std::vector<moab::EntityHandle> &entities,
-                                            const bool recursive) const;
-  moab::ErrorCode gather_ents();
+  std::vector<moab::EntityHandle> get_entities_by_dimension(
+      const moab::EntityHandle meshset, const int dimension,
+      const bool recursive) const;
+  void gather_ents();
 
 private:
   moab::EntityHandle create_entity_set(int dim);

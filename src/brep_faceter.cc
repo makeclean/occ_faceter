@@ -173,8 +173,7 @@ void facet_all_volumes(const TopTools_HSequenceOfShape &shape_list,
       // make facets for current face
       facet_data facets = make_surface_facets(face, data);
       facet_vertex_map f_vertex_map;
-      moab::ErrorCode ret = mbtool.generate_facet_vertex_map(f_vertex_map, facets.coords);
-      assert(ret == moab::MB_SUCCESS);
+      mbtool.generate_facet_vertex_map(f_vertex_map, facets.coords);
       mbtool.add_facets_to_surface(surface, facets.connectivity, f_vertex_map);
 
       // add curves to surface

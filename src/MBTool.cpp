@@ -32,16 +32,21 @@ raise_moab_error(moab::ErrorCode rval, const char *file, const int line, const c
 
 // default constructor
 MBTool::MBTool() {
+  mbi = nullptr;
+  geom_tool = nullptr;
+  vi = nullptr;
+
+  for (int i = 0; i < 5; i++) {
+    entity_id[i] = 0;
+  }
+  degenerate_triangle_count = 0;
+
+  try {
     mbi = new moab::Core();
     geom_tool = new moab::GeomTopoTool(mbi);
 
     // new vertex inserter
     vi = new VertexInserter::VertexInserter(mbi,1.e-6); // should pass the tolernace by arg
-
-    for (int i = 0; i < 5; i++) {
-      entity_id[i] = 0;
-    }
-    degenerate_triangle_count = 0;
 
     // make a new meshset to put stuff in
     CHECK_MOAB_RVAL(mbi->create_meshset(moab::MESHSET_SET, rootset));
@@ -71,13 +76,20 @@ MBTool::MBTool() {
 
     CHECK_MOAB_RVAL(mbi->tag_get_handle("MatID", 1, moab::MB_TYPE_INTEGER,
                                mat_id_tag, moab::MB_TAG_DENSE | moab::MB_TAG_CREAT));
+  } catch (...) {
+    if (vi) delete vi;
+    if (geom_tool) delete geom_tool;
+    if (mbi) delete mbi;
+    throw;
+  }
 }
 
 // destructor
 MBTool::~MBTool() {
-    delete mbi;
-    delete geom_tool;
-    delete vi;
+  // destroy in reverse order from creation
+  delete vi;
+  delete geom_tool;
+  delete mbi;
 }
 
 void MBTool::set_faceting_tol_tag(double faceting_tol) {

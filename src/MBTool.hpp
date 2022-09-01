@@ -17,7 +17,7 @@ class GeomTopoTool;
 
 class mberror : public std::runtime_error {
 public:
-  mberror(moab::ErrorCode error_code, const char* what)
+  mberror(moab::ErrorCode error_code, const std::string & what)
     : error_code(error_code), std::runtime_error(what) {}
 
   moab::ErrorCode error_code;

@@ -137,10 +137,8 @@ moab::EntityHandle MBTool::make_new_node() {
 }
 
 // add a new group (for materials)
-void MBTool::add_group(
-  const std::string &name,
-  const std::vector<moab::EntityHandle> &entities)
-{
+void MBTool::add_group(const std::string &name,
+                       const std::vector<moab::EntityHandle> &entities) {
   moab::EntityHandle group = create_entity_set(4);
 
   char namebuf[NAME_TAG_SIZE];
@@ -189,15 +187,13 @@ void MBTool::add_mat_ids() {
 
 // add surfaces to volumes, or curves to surfaces
 void MBTool::add_child_to_parent(moab::EntityHandle surface,
-          moab::EntityHandle volume, int sense)
-{
+          moab::EntityHandle volume, int sense) {
   CHECK_MOAB_RVAL(mbi->add_parent_child(volume, surface));
   CHECK_MOAB_RVAL(geom_tool->set_sense(surface, volume, sense));
 }
 
 void MBTool::generate_facet_vertex_map(facet_vertex_map& vertex_map,
-                                       const facet_coords& coords)
-{
+                                       const facet_coords& coords) {
   vertex_map.clear();
 
   // for each coordinate in the surface make the moab vertex
@@ -230,14 +226,13 @@ void MBTool::generate_facet_vertex_map(facet_vertex_map& vertex_map,
     v_pair.vertex = vert;
     v_pair.set = set;
     vertex_map[idx] = v_pair;
-    idx += 1;
+    idx++;
   }
 }
 
 // add facets to surface
 void MBTool::add_facets_to_surface(moab::EntityHandle surface,
-  const facet_connectivity& connectivity_list, const facet_vertex_map& vertex_map)
-{
+  const facet_connectivity& connectivity_list, const facet_vertex_map& vertex_map) {
   moab::Range vertices;
   for (auto const & pair : vertex_map) {
     vertices.insert(pair.second.vertex);
@@ -281,8 +276,7 @@ void MBTool::add_facets_to_surface(moab::EntityHandle surface,
 
 // add curves to surface
 void MBTool::build_curve(moab::EntityHandle curve,
-  edge_data edge_collection_i, const facet_vertex_map& vertex_map)
-{
+  edge_data edge_collection_i, const facet_vertex_map& vertex_map) {
   if (edge_collection_i.connectivity.empty()) {
     std::cout << "Warning: Attempting to build empty curve." << std::endl;
     // throw std::runtime_error("attempting to build empty curve");
@@ -336,16 +330,14 @@ void MBTool::write_geometry(const std::string &filename) {
 
 std::vector<moab::EntityHandle> MBTool::get_entities_by_dimension(
   const moab::EntityHandle meshset, const int dimension,
-  const bool recursive) const
-{
+  const bool recursive) const {
   std::vector<moab::EntityHandle> entities;
   CHECK_MOAB_RVAL(mbi->get_entities_by_dimension(meshset, dimension, entities, recursive));
   return entities;
 }
 
 // add all entities to rootset
-void MBTool::gather_ents()
-{
+void MBTool::gather_ents() {
   std::cout << "ent counts: " << entity_id[0] << " " << entity_id[1]
   << " " << entity_id[2] << " " << entity_id[3] << " " << entity_id[4] << std::endl;
 

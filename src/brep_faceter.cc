@@ -145,8 +145,7 @@ void facet_all_volumes(const TopTools_HSequenceOfShape &shape_list,
         continue;
 
       uniqueFaces.push_back(face);
-      moab::EntityHandle surface;
-      mbtool.make_new_surface(surface);
+      moab::EntityHandle surface = mbtool.make_new_surface();
       surfaceMap.Add(face, surface);
     }
   }
@@ -174,8 +173,7 @@ void facet_all_volumes(const TopTools_HSequenceOfShape &shape_list,
       // make facets for current face
       facet_data facets = make_surface_facets(face, data);
       facet_vertex_map f_vertex_map;
-      moab::ErrorCode ret = mbtool.generate_facet_vertex_map(f_vertex_map, facets.coords);
-      assert(ret == moab::MB_SUCCESS);
+      mbtool.generate_facet_vertex_map(f_vertex_map, facets.coords);
       mbtool.add_facets_to_surface(surface, facets.connectivity, f_vertex_map);
 
       // add curves to surface
@@ -186,7 +184,7 @@ void facet_all_volumes(const TopTools_HSequenceOfShape &shape_list,
 
         moab::EntityHandle curve;
         if (!edgeMap.FindFromKey(currentEdge, curve)) {
-          mbtool.make_new_curve(curve);
+          curve = mbtool.make_new_curve();
           edgeMap.Add(currentEdge, curve);
 
           edge_data edges = make_edge_facets(currentEdge, data);
@@ -210,8 +208,7 @@ void facet_all_volumes(const TopTools_HSequenceOfShape &shape_list,
   for (int i = 1; i <= count; i++) {
     const TopoDS_Shape &shape = shape_list.Value(i);
 
-    moab::EntityHandle vol;
-    mbtool.make_new_volume(vol);
+    moab::EntityHandle vol = mbtool.make_new_volume();
 
     for (TopExp_Explorer ex(shape, TopAbs_FACE); ex.More(); ex.Next()) {
       const TopoDS_Face &face = TopoDS::Face(ex.Current());
@@ -289,8 +286,8 @@ void brep_faceter(std::string brep_file, std::string json_file,
   read_metadata(json_file, materials_map);
 
   MBTool mbtool;
-  // TODO: Use faceting tolerance value in set_tags and review use of GEOMETRY_RESABS
-  mbtool.set_tags();
+  // TODO: review use of GEOMETRY_RESABS
+  mbtool.set_faceting_tol_tag(facet_tol.tolerance);
   sew_and_facet(shape, facet_tol, mbtool, materials_map);
 
   if (add_mat_ids)

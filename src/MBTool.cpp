@@ -3,6 +3,7 @@
 #include <cstring>
 
 #include "moab/GeomTopoTool.hpp"
+#include "moab/Types.hpp"
 
 const char geom_categories[][CATEGORY_TAG_SIZE] = {"Vertex\0",
 						   "Curve\0",
@@ -11,116 +12,134 @@ const char geom_categories[][CATEGORY_TAG_SIZE] = {"Vertex\0",
 						   "Group\0"};
 
 
+// throw an mberror with message formatted to include filename, linenumber, and failing expression
+static __attribute__((noreturn)) void
+raise_moab_error(moab::ErrorCode rval, const char *file, const int line, const char *expr) {
+  std::ostringstream err;
+  err
+    << file << ':' << line
+    << " got " << moab::ErrorCodeStr[rval]
+    << " from: " << expr;
+  throw mberror(rval, err.str());
+}
+
+// helper to throw an exception fron a moab::ErrorCode
+#define CHECK_MOAB_RVAL(expr) \
+  do { moab::ErrorCode rval = (expr); \
+    if (rval != moab::MB_SUCCESS) raise_moab_error(rval, __FILE__, __LINE__, #expr); \
+  } while (0)
+
+
 // default constructor
 MBTool::MBTool() {
+  mbi = nullptr;
+  geom_tool = nullptr;
+  vi = nullptr;
+
+  for (int i = 0; i < 5; i++) {
+    entity_id[i] = 0;
+  }
+  degenerate_triangle_count = 0;
+
+  try {
     mbi = new moab::Core();
     geom_tool = new moab::GeomTopoTool(mbi);
 
     // new vertex inserter
-    vi = new VertexInserter::VertexInserter(mbi,1.e-6); // should pass the
-                                        // tolernace by arg  
-    for (int i = 0; i < 5; i++) {
-      entity_id[i] = 0;
-    }
-    degenerate_triangle_count = 0;
+    vi = new VertexInserter::VertexInserter(mbi,1.e-6); // should pass the tolernace by arg
 
     // make a new meshset to put stuff in
-    moab::ErrorCode rval = mbi->create_meshset(moab::MESHSET_SET, rootset);
+    CHECK_MOAB_RVAL(mbi->create_meshset(moab::MESHSET_SET, rootset));
 
     // create tags
-    rval = mbi->tag_get_handle(GEOM_DIMENSION_TAG_NAME, 1, moab::MB_TYPE_INTEGER,
-                               geometry_dimension_tag, moab::MB_TAG_DENSE | moab::MB_TAG_CREAT);
-    MB_CHK_SET_ERR_RET(rval, "Couldnt get geom dim tag");
+    CHECK_MOAB_RVAL(mbi->tag_get_handle(GEOM_DIMENSION_TAG_NAME, 1, moab::MB_TYPE_INTEGER,
+                               geometry_dimension_tag, moab::MB_TAG_DENSE | moab::MB_TAG_CREAT));
 
-    rval = mbi->tag_get_handle(GLOBAL_ID_TAG_NAME, 1, moab::MB_TYPE_INTEGER,
-                               id_tag, moab::MB_TAG_DENSE | moab::MB_TAG_CREAT);
-    MB_CHK_SET_ERR_RET(rval, "Couldnt get id tag");
+    CHECK_MOAB_RVAL(mbi->tag_get_handle(GLOBAL_ID_TAG_NAME, 1, moab::MB_TYPE_INTEGER,
+                               id_tag, moab::MB_TAG_DENSE | moab::MB_TAG_CREAT));
 
-    rval = mbi->tag_get_handle(NAME_TAG_NAME, NAME_TAG_SIZE, moab::MB_TYPE_OPAQUE,
-                               name_tag, moab::MB_TAG_SPARSE | moab::MB_TAG_CREAT);
-    MB_CHK_SET_ERR_RET(rval, "Error creating name_tag");
+    CHECK_MOAB_RVAL(mbi->tag_get_handle(NAME_TAG_NAME, NAME_TAG_SIZE, moab::MB_TYPE_OPAQUE,
+                               name_tag, moab::MB_TAG_SPARSE | moab::MB_TAG_CREAT));
 
-    rval = mbi->tag_get_handle(CATEGORY_TAG_NAME, CATEGORY_TAG_SIZE, moab::MB_TYPE_OPAQUE, 
-                               category_tag, moab::MB_TAG_SPARSE | moab::MB_TAG_CREAT);
-    MB_CHK_SET_ERR_RET(rval, "Error creating category_tag");
+    CHECK_MOAB_RVAL(mbi->tag_get_handle(CATEGORY_TAG_NAME, CATEGORY_TAG_SIZE, moab::MB_TYPE_OPAQUE,
+                               category_tag, moab::MB_TAG_SPARSE | moab::MB_TAG_CREAT));
 
-    rval = mbi->tag_get_handle("FACETING_TOL", 1, moab::MB_TYPE_DOUBLE, faceting_tol_tag,
-                               moab::MB_TAG_SPARSE | moab::MB_TAG_CREAT);
-    MB_CHK_SET_ERR_RET(rval, "Error creating faceting_tol_tag");
+    CHECK_MOAB_RVAL(mbi->tag_get_handle("FACETING_TOL", 1, moab::MB_TYPE_DOUBLE, faceting_tol_tag,
+                               moab::MB_TAG_SPARSE | moab::MB_TAG_CREAT));
 
-    rval = mbi->tag_get_handle("GEOMETRY_RESABS", 1, moab::MB_TYPE_DOUBLE, 
-                               geometry_resabs_tag, moab::MB_TAG_SPARSE | moab::MB_TAG_CREAT);
-    MB_CHK_SET_ERR_RET(rval, "Error creating geometry_resabs_tag");
+    CHECK_MOAB_RVAL(mbi->tag_get_handle("GEOMETRY_RESABS", 1, moab::MB_TYPE_DOUBLE,
+                               geometry_resabs_tag, moab::MB_TAG_SPARSE | moab::MB_TAG_CREAT));
 
-    rval = mbi->tag_get_handle("VOL_ID", 1, moab::MB_TYPE_INTEGER, vol_id_tag, moab::MB_TAG_DENSE | moab::MB_TAG_CREAT);
-    MB_CHK_SET_ERR_RET(rval, "Couldnt get vol_id tag");
+    CHECK_MOAB_RVAL(mbi->tag_get_handle("VOL_ID", 1, moab::MB_TYPE_INTEGER, vol_id_tag, moab::MB_TAG_DENSE | moab::MB_TAG_CREAT));
 
-    rval = mbi->tag_get_handle("SURF_ID", 1, moab::MB_TYPE_INTEGER, surf_id_tag, moab::MB_TAG_DENSE | moab::MB_TAG_CREAT);
-    MB_CHK_SET_ERR_RET(rval, "Couldnt get surf_id tag");
+    CHECK_MOAB_RVAL(mbi->tag_get_handle("SURF_ID", 1, moab::MB_TYPE_INTEGER, surf_id_tag, moab::MB_TAG_DENSE | moab::MB_TAG_CREAT));
 
-    rval = mbi->tag_get_handle("MatID", 1, moab::MB_TYPE_INTEGER,
-                               mat_id_tag, moab::MB_TAG_DENSE | moab::MB_TAG_CREAT);
-    MB_CHK_SET_ERR_RET(rval, "Error creating mat_id_tag");
+    CHECK_MOAB_RVAL(mbi->tag_get_handle("MatID", 1, moab::MB_TYPE_INTEGER,
+                               mat_id_tag, moab::MB_TAG_DENSE | moab::MB_TAG_CREAT));
+  } catch (...) {
+    if (vi) delete vi;
+    if (geom_tool) delete geom_tool;
+    if (mbi) delete mbi;
+    throw;
+  }
 }
 
 // destructor
 MBTool::~MBTool() {
-    delete mbi;
-    delete geom_tool;
-    delete vi;
+  // destroy in reverse order from creation
+  delete vi;
+  delete geom_tool;
+  delete mbi;
 }
 
-moab::ErrorCode MBTool::set_tags() {
+void MBTool::set_faceting_tol_tag(double faceting_tol) {
   moab::EntityHandle set = rootset; // ? *rootset : 0;
-  moab::ErrorCode rval;
-  double faceting_tol = 1.e-4;
-  double geom_tol = 1.e-6;
-  rval = mbi->tag_set_data(faceting_tol_tag, &set, 1, &faceting_tol);
-  rval = mbi->tag_set_data(geometry_resabs_tag, &set, 1, &geom_tol);
-  return moab::MB_SUCCESS;
+  CHECK_MOAB_RVAL(mbi->tag_set_data(faceting_tol_tag, &set, 1, &faceting_tol));
 }
 
-moab::ErrorCode MBTool::create_entity_set(moab::EntityHandle &entity, int dim) {
+void MBTool::set_geometry_tol_tag(double geom_tol) {
+  moab::EntityHandle set = rootset; // ? *rootset : 0;
+  CHECK_MOAB_RVAL(mbi->tag_set_data(geometry_resabs_tag, &set, 1, &geom_tol));
+}
+
+moab::EntityHandle MBTool::create_entity_set(int dim) {
   // TODO: Check meshset options - Cubit-plugin has different behaviour
   unsigned int options = (dim == 2 || dim == 3) ? moab::MESHSET_ORDERED : moab::MESHSET_SET;
-  moab::ErrorCode rval = mbi->create_meshset(options, entity);
-  MB_CHK_ERR(rval);
+
+  moab::EntityHandle result;
+  CHECK_MOAB_RVAL(mbi->create_meshset(options, result));
 
   entity_id[dim]++;
-  rval = mbi->tag_set_data(id_tag,&entity,1,&entity_id[dim]);
-  MB_CHK_ERR(rval);
+  CHECK_MOAB_RVAL(mbi->tag_set_data(id_tag,&result,1,&entity_id[dim]));
 
   if (dim <= 3) {
-    rval = mbi->tag_set_data(geometry_dimension_tag,&entity,1,&dim);
-    MB_CHK_ERR(rval);
+    CHECK_MOAB_RVAL(mbi->tag_set_data(geometry_dimension_tag,&result,1,&dim));
   }
 
-  return mbi->tag_set_data(category_tag,&entity,1,&geom_categories[dim]);
+  CHECK_MOAB_RVAL(mbi->tag_set_data(category_tag,&result,1,&geom_categories[dim]));
+  return result;
 }
 
-moab::ErrorCode MBTool::make_new_volume(moab::EntityHandle &volume) {
-  return create_entity_set(volume, 3);
+moab::EntityHandle MBTool::make_new_volume() {
+  return create_entity_set(3);
 }
 
-moab::ErrorCode MBTool::make_new_surface(moab::EntityHandle &surface) {
-  return create_entity_set(surface, 2);
+moab::EntityHandle MBTool::make_new_surface() {
+  return create_entity_set(2);
 }
 
-moab::ErrorCode MBTool::make_new_curve(moab::EntityHandle &curve) {
-  return create_entity_set(curve, 1);
+moab::EntityHandle MBTool::make_new_curve() {
+  return create_entity_set(1);
 }
 
-moab::ErrorCode MBTool::make_new_node(moab::EntityHandle &node) {
-  return create_entity_set(node, 0);
+moab::EntityHandle MBTool::make_new_node() {
+  return create_entity_set(0);
 }
 
 // add a new group (for materials)
-moab::ErrorCode MBTool::add_group(const std::string &name,
-                                  const std::vector<moab::EntityHandle> &entities) {
-  moab::ErrorCode rval;
-  moab::EntityHandle group;
-  rval = create_entity_set(group, 4);
-  if (moab::MB_SUCCESS != rval) return rval;
+void MBTool::add_group(const std::string &name,
+                       const std::vector<moab::EntityHandle> &entities) {
+  moab::EntityHandle group = create_entity_set(4);
 
   char namebuf[NAME_TAG_SIZE];
   memset(namebuf, '\0', NAME_TAG_SIZE);
@@ -129,66 +148,52 @@ moab::ErrorCode MBTool::add_group(const std::string &name,
     std::cout << "WARNING: group name '" << name.c_str()
               << "' truncated to '" << namebuf << "'" << std::endl;
   }
-  rval = mbi->tag_set_data(name_tag, &group, 1, namebuf);
-  if (moab::MB_SUCCESS != rval) return rval;
-
-  rval = mbi->add_entities(group, entities.data(), entities.size());
-  return rval;
+  CHECK_MOAB_RVAL(mbi->tag_set_data(name_tag, &group, 1, namebuf));
+  CHECK_MOAB_RVAL(mbi->add_entities(group, entities.data(), entities.size()));
 }
 
 // set a MatID on every triangle (in prep for converting output to .vtk, and viewing in Paraview)
-moab::ErrorCode MBTool::add_mat_ids() {
-  moab::ErrorCode rval;
-
+void MBTool::add_mat_ids() {
   // get material groups
   moab::Range material_groups;
   const void *tag_data = &geom_categories[4];
-  rval = mbi->get_entities_by_type_and_tag(0, moab::MBENTITYSET, &category_tag,
-                                           &tag_data, 1, material_groups);
-  if (moab::MB_SUCCESS != rval) return rval;
+  CHECK_MOAB_RVAL(mbi->get_entities_by_type_and_tag(
+    0, moab::MBENTITYSET, &category_tag, &tag_data, 1, material_groups));
 
   for (auto &&group : material_groups) {
     // get groupID
     int groupID;
-    rval = mbi->tag_get_data(id_tag, &group, 1, &groupID);
-    if (moab::MB_SUCCESS != rval) return rval;
+    CHECK_MOAB_RVAL(mbi->tag_get_data(id_tag, &group, 1, &groupID));
 
     // get volumes
     moab::Range volumes;
-    rval = mbi->get_entities_by_handle(group, volumes);
-    if (moab::MB_SUCCESS != rval) return rval;
+    CHECK_MOAB_RVAL(mbi->get_entities_by_handle(group, volumes));
 
     // set MatID on triangles
     for (auto &&vol : volumes) {
       moab::Range surfaces;
-      rval = mbi->get_child_meshsets(vol, surfaces);
-      if (moab::MB_SUCCESS != rval) return rval;
+      CHECK_MOAB_RVAL(mbi->get_child_meshsets(vol, surfaces));
 
       for (auto &&surface : surfaces) {
         moab::Range tris;
-        rval = mbi->get_entities_by_type(surface, moab::MBTRI, tris, true);
-        if (moab::MB_SUCCESS != rval) return rval;
+        CHECK_MOAB_RVAL(mbi->get_entities_by_type(surface, moab::MBTRI, tris, true));
 
         std::vector<int> matIDs(tris.size(), groupID);
-        rval = mbi->tag_set_data(mat_id_tag, tris, matIDs.data());
-        if (moab::MB_SUCCESS != rval) return rval;
+        CHECK_MOAB_RVAL(mbi->tag_set_data(mat_id_tag, tris, matIDs.data()));
       }
     }
   }
-  return rval;
 }
 
 // add surfaces to volumes, or curves to surfaces
-moab::ErrorCode MBTool::add_child_to_parent(moab::EntityHandle surface,
+void MBTool::add_child_to_parent(moab::EntityHandle surface,
           moab::EntityHandle volume, int sense) {
-  moab::ErrorCode rval;
-  rval = mbi->add_parent_child(volume, surface);
-  MB_CHK_ERR(rval);
-  return geom_tool->set_sense(surface, volume, sense);
+  CHECK_MOAB_RVAL(mbi->add_parent_child(volume, surface));
+  CHECK_MOAB_RVAL(geom_tool->set_sense(surface, volume, sense));
 }
 
-moab::ErrorCode MBTool::generate_facet_vertex_map(facet_vertex_map& vertex_map,
-                                                  const facet_coords& coords) {
+void MBTool::generate_facet_vertex_map(facet_vertex_map& vertex_map,
+                                       const facet_coords& coords) {
   vertex_map.clear();
 
   // for each coordinate in the surface make the moab vertex
@@ -201,20 +206,18 @@ moab::ErrorCode MBTool::generate_facet_vertex_map(facet_vertex_map& vertex_map,
     moab::EntityHandle set;
     if (rval == moab::MB_ENTITY_NOT_FOUND) {
       // create a meshset for the new vertex
-      rval = make_new_node(set);
-      MB_CHK_ERR(rval);
+      set = make_new_node();
 
       moab::Range vertices;
       vertices.insert(vert);
-      rval = mbi->add_entities(set, vertices);
-      MB_CHK_ERR(rval);
+      CHECK_MOAB_RVAL(mbi->add_entities(set, vertices));
 
       vertex_to_set_map[vert] = set;
     } else {
       // find the corresponding meshset
       ent_ent_map::iterator it = vertex_to_set_map.find(vert);
       if (vertex_to_set_map.end() == it) {
-        return moab::MB_ENTITY_NOT_FOUND;
+        throw std::runtime_error("internal error, vertex not found in map");
       }
       set = it->second;
     }
@@ -225,18 +228,16 @@ moab::ErrorCode MBTool::generate_facet_vertex_map(facet_vertex_map& vertex_map,
     vertex_map[idx] = v_pair;
     idx++;
   }
-  return moab::MB_SUCCESS;
 }
 
 // add facets to surface
-moab::ErrorCode MBTool::add_facets_to_surface(moab::EntityHandle surface,
+void MBTool::add_facets_to_surface(moab::EntityHandle surface,
   const facet_connectivity& connectivity_list, const facet_vertex_map& vertex_map) {
-
   moab::Range vertices;
   for (auto const & pair : vertex_map) {
     vertices.insert(pair.second.vertex);
   }
-  moab::ErrorCode rval = mbi->add_entities(surface, vertices);
+  CHECK_MOAB_RVAL(mbi->add_entities(surface, vertices));
 
   moab::Range triangles;
   for ( std::array<int,3> connectivity : connectivity_list) {
@@ -246,17 +247,17 @@ moab::ErrorCode MBTool::add_facets_to_surface(moab::EntityHandle surface,
     connections[1] = vertex_map.at(connectivity[1]).vertex;
     connections[2] = vertex_map.at(connectivity[2]).vertex;
 
-    if ( connections[2] == connections[1] ||
+    if (connections[2] == connections[1] ||
         connections[1] == connections[0] ||
         connections[2] == connections[0] ) {
       degenerate_triangle_count++;
     } else {
-      moab::ErrorCode rval = mbi->create_element(moab::MBTRI,connections,3,tri);
+      CHECK_MOAB_RVAL(mbi->create_element(moab::MBTRI,connections,3,tri));
       triangles.insert(tri);
     }
   }
 
-  rval = mbi->add_entities(surface,triangles);
+  CHECK_MOAB_RVAL(mbi->add_entities(surface,triangles));
 
   /*
   // tag the triangles with their volume id
@@ -271,19 +272,15 @@ moab::ErrorCode MBTool::add_facets_to_surface(moab::EntityHandle surface,
     rval = mbi->tag_set_data(surf_id_tag, &triangle,1, surf_ptr);
   }
   */
-  return rval;
 }
 
 // add curves to surface
-moab::ErrorCode MBTool::build_curve(moab::EntityHandle curve,
+void MBTool::build_curve(moab::EntityHandle curve,
   edge_data edge_collection_i, const facet_vertex_map& vertex_map) {
-  
   if (edge_collection_i.connectivity.empty()) {
     std::cout << "Warning: Attempting to build empty curve." << std::endl;
-    return moab::ErrorCode::MB_FAILURE;
+    // throw std::runtime_error("attempting to build empty curve");
   }
-
-  moab::ErrorCode rval;
 
   moab::Range edges;
   moab::Range vertices;
@@ -297,19 +294,19 @@ moab::ErrorCode MBTool::build_curve(moab::EntityHandle curve,
   moab::EntityHandle connection[2];
   connection[1] = v_pair.vertex;
   vertices.insert(v_pair.vertex);
-  rval = mbi->add_parent_child(curve,v_pair.set);
+  CHECK_MOAB_RVAL(mbi->add_parent_child(curve,v_pair.set));
 
   for ( int j = 0 ; j < end_point ; j++ ) {
-
     connection[0] = connection[1];
     v_pair = vertex_map.at(edge_collection_i.connectivity.at(j+1));
     connection[1] = v_pair.vertex;
     vertices.insert(v_pair.vertex);
-    rval = mbi->add_parent_child(curve,v_pair.set);
 
-    moab::EntityHandle h;
-    rval = mbi->create_element(moab::MBEDGE, connection, 2, h);
-    edges.insert(h);
+    CHECK_MOAB_RVAL(mbi->add_parent_child(curve,v_pair.set));
+
+    moab::EntityHandle edge;
+    CHECK_MOAB_RVAL(mbi->create_element(moab::MBEDGE, connection, 2, edge));
+    edges.insert(edge);
   }
 
   // if curve is closed, remove duplicate vertex
@@ -317,14 +314,13 @@ moab::ErrorCode MBTool::build_curve(moab::EntityHandle curve,
     vertices.pop_back();
 
   // add vertices and edges to curve, and curve to surface
-  rval = mbi->add_entities(curve,vertices);
-  rval = mbi->add_entities(curve,edges);
-  return rval;
+  CHECK_MOAB_RVAL(mbi->add_entities(curve,vertices));
+  CHECK_MOAB_RVAL(mbi->add_entities(curve,edges));
 }
 
 // write the geometry
-void MBTool::write_geometry(std::string filename) {
-  moab::ErrorCode rval = mbi->write_file(filename.c_str());
+void MBTool::write_geometry(const std::string &filename) {
+  CHECK_MOAB_RVAL(mbi->write_file(filename.c_str()));
 
   if (degenerate_triangle_count > 0) {
     std::cout << "Warning: " << degenerate_triangle_count
@@ -332,22 +328,20 @@ void MBTool::write_geometry(std::string filename) {
   }
 }
 
-moab::ErrorCode MBTool::get_entities_by_dimension(const moab::EntityHandle meshset,
-                                                  const int dimension,
-                                                  std::vector<moab::EntityHandle> &entities,
-                                                  const bool recursive) const {
-  return mbi->get_entities_by_dimension(meshset, dimension, entities, recursive);
+std::vector<moab::EntityHandle> MBTool::get_entities_by_dimension(
+  const moab::EntityHandle meshset, const int dimension,
+  const bool recursive) const {
+  std::vector<moab::EntityHandle> entities;
+  CHECK_MOAB_RVAL(mbi->get_entities_by_dimension(meshset, dimension, entities, recursive));
+  return entities;
 }
 
 // add all entities to rootset
-moab::ErrorCode MBTool::gather_ents()
-{
+void MBTool::gather_ents() {
   std::cout << "ent counts: " << entity_id[0] << " " << entity_id[1]
   << " " << entity_id[2] << " " << entity_id[3] << " " << entity_id[4] << std::endl;
 
-
   moab::Range ents;
-  moab::ErrorCode rval = mbi->get_entities_by_handle(0, ents);
-  MB_CHK_ERR(rval);
-  return mbi->add_entities(rootset,ents);
+  CHECK_MOAB_RVAL(mbi->get_entities_by_handle(0, ents));
+  CHECK_MOAB_RVAL(mbi->add_entities(rootset,ents));
 }

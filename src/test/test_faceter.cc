@@ -33,6 +33,7 @@ TEST_CASE("Faceting BREP and writing to MOAB", "[faceter]") {
   std::vector<moab::EntityHandle> triangles = mbtool.get_entities_by_dimension(0, 2, true);
   CHECK(triangles.size() == 22);
 
+  mbtool.gather_ents();
   mbtool.write_geometry(output_path);
 
   // pt_in_vol and ray_file tests

@@ -44,6 +44,7 @@
 
 typedef NCollection_IndexedDataMap<TopoDS_Face, moab::EntityHandle, TopTools_ShapeMapHasher> MapFaceToSurface;
 typedef NCollection_IndexedDataMap<TopoDS_Edge, moab::EntityHandle, TopTools_ShapeMapHasher> MapEdgeToCurve;
+typedef NCollection_IndexedDataMap<TopoDS_Vertex, moab::EntityHandle, TopTools_ShapeMapHasher> MapVertexToMeshset;
 
 struct TriangulationWithLocation {
   TopLoc_Location loc;
@@ -132,6 +133,7 @@ void facet_all_volumes(const TopTools_HSequenceOfShape &shape_list,
   std::vector<TopoDS_Face> uniqueFaces;
   MapFaceToSurface surfaceMap;
   MapEdgeToCurve edgeMap;
+  MapVertexToMeshset vertexMap;
 
   // list unique faces, create empty surfaces, and build surface map
 
@@ -189,6 +191,27 @@ void facet_all_volumes(const TopTools_HSequenceOfShape &shape_list,
 
           edge_data edges = make_edge_facets(currentEdge, data);
           mbtool.build_curve(curve, edges, f_vertex_map);
+
+          // add vertices to edges
+          TopTools_IndexedMapOfShape vertices;
+          TopExp::MapShapes(currentEdge, TopAbs_VERTEX, vertices);
+          for (int j = 1; j < vertices.Extent(); j++) {
+            const TopoDS_Vertex &currentVertex = TopoDS::Vertex(vertices(j));
+
+            moab::EntityHandle meshset;
+            if (!vertexMap.FindFromKey(currentVertex, meshset)) {
+              // create meshset for the vertex, add it to the map, and add its node
+              meshset = mbtool.make_new_vertex();
+              vertexMap.Add(currentVertex, meshset);
+
+              gp_Pnt pnt = BRep_Tool::Pnt(currentVertex);
+              std::array<double, 3> coords;
+              coords[0] = pnt.X(); coords[1] = pnt.Y(); coords[2] = pnt.Z();
+              mbtool.add_node_to_meshset(meshset, coords);
+            }
+
+            mbtool.add_child_to_parent(meshset, curve);
+          }
         }
         int sense = currentEdge.Orientation() == TopAbs_REVERSED ? moab::SENSE_REVERSE : moab::SENSE_FORWARD;
         mbtool.add_child_to_parent(curve, surface, sense);

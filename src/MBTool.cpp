@@ -15,10 +15,16 @@ const char geom_categories[][CATEGORY_TAG_SIZE] = {"Vertex\0",
 // throw an mberror with message formatted to include filename, linenumber, and failing expression
 static __attribute__((noreturn)) void
 raise_moab_error(moab::ErrorCode rval, const char *file, const int line, const char *expr) {
+  std::string errorCodeStr;
+  if ((unsigned)rval <= (unsigned)moab::MB_FAILURE) {
+    errorCodeStr = moab::ErrorCodeStr[rval];
+  } else {
+    errorCodeStr = std::to_string((int)rval);
+  }
   std::ostringstream err;
   err
     << file << ':' << line
-    << " got " << moab::ErrorCodeStr[rval]
+    << " got " << errorCodeStr
     << " from: " << expr;
   throw mberror(rval, err.str());
 }
@@ -132,7 +138,7 @@ moab::EntityHandle MBTool::make_new_curve() {
   return create_entity_set(1);
 }
 
-moab::EntityHandle MBTool::make_new_node() {
+moab::EntityHandle MBTool::make_new_vertex() {
   return create_entity_set(0);
 }
 
@@ -192,6 +198,12 @@ void MBTool::add_child_to_parent(moab::EntityHandle surface,
   CHECK_MOAB_RVAL(geom_tool->set_sense(surface, volume, sense));
 }
 
+// add vertices to curves
+void MBTool::add_child_to_parent(moab::EntityHandle vertex,
+          moab::EntityHandle curve) {
+  CHECK_MOAB_RVAL(mbi->add_parent_child(curve, vertex));
+}
+
 void MBTool::generate_facet_vertex_map(facet_vertex_map& vertex_map,
                                        const facet_coords& coords) {
   vertex_map.clear();
@@ -201,33 +213,28 @@ void MBTool::generate_facet_vertex_map(facet_vertex_map& vertex_map,
   for ( std::array<double,3> coord : coords ) {
     moab::EntityHandle vert;
     // check for the existence of a vertex, and create a new one if necessary
-    moab::ErrorCode rval = vi->insert_vertex(coord,vert);
-
-    moab::EntityHandle set;
-    if (rval == moab::MB_ENTITY_NOT_FOUND) {
-      // create a meshset for the new vertex
-      set = make_new_node();
-
-      moab::Range vertices;
-      vertices.insert(vert);
-      CHECK_MOAB_RVAL(mbi->add_entities(set, vertices));
-
-      vertex_to_set_map[vert] = set;
-    } else {
-      // find the corresponding meshset
-      ent_ent_map::iterator it = vertex_to_set_map.find(vert);
-      if (vertex_to_set_map.end() == it) {
-        throw std::runtime_error("internal error, vertex not found in map");
-      }
-      set = it->second;
+    moab::ErrorCode insert_rval = vi->insert_vertex(coord,vert);
+    if (insert_rval != moab::MB_ENTITY_NOT_FOUND) {
+      CHECK_MOAB_RVAL(insert_rval);
     }
 
-    facet_vertex_pair v_pair;
-    v_pair.vertex = vert;
-    v_pair.set = set;
-    vertex_map[idx] = v_pair;
+    vertex_map[idx] = vert;
     idx++;
   }
+}
+
+void MBTool::add_node_to_meshset(moab::EntityHandle meshset,
+  std::array<double,3> coord) {
+
+  // check for the existence of a node, and create a new one if necessary
+  moab::EntityHandle node;
+  moab::ErrorCode insert_rval = vi->insert_vertex(coord, node);
+  if (insert_rval != moab::MB_ENTITY_NOT_FOUND) {
+    CHECK_MOAB_RVAL(insert_rval);
+  }
+
+  // add node to meshset
+  CHECK_MOAB_RVAL(mbi->add_entities(meshset, &node, 1));
 }
 
 // add facets to surface
@@ -235,7 +242,7 @@ void MBTool::add_facets_to_surface(moab::EntityHandle surface,
   const facet_connectivity& connectivity_list, const facet_vertex_map& vertex_map) {
   moab::Range vertices;
   for (auto const & pair : vertex_map) {
-    vertices.insert(pair.second.vertex);
+    vertices.insert(pair.second);
   }
   CHECK_MOAB_RVAL(mbi->add_entities(surface, vertices));
 
@@ -243,9 +250,9 @@ void MBTool::add_facets_to_surface(moab::EntityHandle surface,
   for ( std::array<int,3> connectivity : connectivity_list) {
     moab::EntityHandle tri;
     moab::EntityHandle connections[3];
-    connections[0] = vertex_map.at(connectivity[0]).vertex;
-    connections[1] = vertex_map.at(connectivity[1]).vertex;
-    connections[2] = vertex_map.at(connectivity[2]).vertex;
+    connections[0] = vertex_map.at(connectivity[0]);
+    connections[1] = vertex_map.at(connectivity[1]);
+    connections[2] = vertex_map.at(connectivity[2]);
 
     if (connections[2] == connections[1] ||
         connections[1] == connections[0] ||
@@ -290,19 +297,16 @@ void MBTool::build_curve(moab::EntityHandle curve,
   (end_point = edge_collection_i.connectivity.size() - 1) :
   (end_point = edge_collection_i.connectivity.size() - 2); 
 
-  facet_vertex_pair v_pair = vertex_map.at(edge_collection_i.connectivity.at(0));
+  moab::EntityHandle vertex = vertex_map.at(edge_collection_i.connectivity.at(0));
   moab::EntityHandle connection[2];
-  connection[1] = v_pair.vertex;
-  vertices.insert(v_pair.vertex);
-  CHECK_MOAB_RVAL(mbi->add_parent_child(curve,v_pair.set));
+  connection[1] = vertex;
+  vertices.insert(vertex);
 
   for ( int j = 0 ; j < end_point ; j++ ) {
     connection[0] = connection[1];
-    v_pair = vertex_map.at(edge_collection_i.connectivity.at(j+1));
-    connection[1] = v_pair.vertex;
-    vertices.insert(v_pair.vertex);
-
-    CHECK_MOAB_RVAL(mbi->add_parent_child(curve,v_pair.set));
+    vertex = vertex_map.at(edge_collection_i.connectivity.at(j+1));
+    connection[1] = vertex;
+    vertices.insert(vertex);
 
     moab::EntityHandle edge;
     CHECK_MOAB_RVAL(mbi->create_element(moab::MBEDGE, connection, 2, edge));
@@ -313,7 +317,7 @@ void MBTool::build_curve(moab::EntityHandle curve,
   if (vertices.front() == vertices.back())
     vertices.pop_back();
 
-  // add vertices and edges to curve, and curve to surface
+  // add vertices and edges to curve
   CHECK_MOAB_RVAL(mbi->add_entities(curve,vertices));
   CHECK_MOAB_RVAL(mbi->add_entities(curve,edges));
 }
@@ -334,6 +338,12 @@ std::vector<moab::EntityHandle> MBTool::get_entities_by_dimension(
   std::vector<moab::EntityHandle> entities;
   CHECK_MOAB_RVAL(mbi->get_entities_by_dimension(meshset, dimension, entities, recursive));
   return entities;
+}
+
+size_t MBTool::get_number_of_meshsets() {
+  moab::Range ents;
+  CHECK_MOAB_RVAL(mbi->get_entities_by_type(0, moab::MBENTITYSET, ents));
+  return ents.size();
 }
 
 // add all entities to rootset

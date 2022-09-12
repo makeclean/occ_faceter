@@ -195,7 +195,7 @@ void facet_all_volumes(const TopTools_HSequenceOfShape &shape_list,
           // add vertices to edges
           TopTools_IndexedMapOfShape vertices;
           TopExp::MapShapes(currentEdge, TopAbs_VERTEX, vertices);
-          for (int j = 1; j < vertices.Extent(); j++) {
+          for (int j = 1; j <= vertices.Extent(); j++) {
             const TopoDS_Vertex &currentVertex = TopoDS::Vertex(vertices(j));
 
             moab::EntityHandle meshset;

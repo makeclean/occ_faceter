@@ -37,12 +37,7 @@ struct edge_data {
   std::vector<int> connectivity;
 };
 
-struct facet_vertex_pair {
-  moab::EntityHandle vertex;
-  moab::EntityHandle set;
-};
-
-typedef std::map<int,facet_vertex_pair> facet_vertex_map;
+typedef std::map<int,moab::EntityHandle> facet_vertex_map;
 
 class MBTool {
 public:
@@ -54,12 +49,14 @@ public:
   moab::EntityHandle make_new_volume();
   moab::EntityHandle make_new_surface();
   moab::EntityHandle make_new_curve();
-  moab::EntityHandle make_new_node();
+  moab::EntityHandle make_new_vertex();
 
   void write_geometry(const std::string &filename);
 
   void generate_facet_vertex_map(facet_vertex_map& vertex_map,
                                  const facet_coords& coords);
+  void add_node_to_meshset(moab::EntityHandle meshset,
+                           std::array<double,3> coord);
   void add_facets_to_surface(moab::EntityHandle surface,
                              const facet_connectivity& connectivity_list,
                              const facet_vertex_map& vertex_map);
@@ -67,6 +64,8 @@ public:
                               const facet_vertex_map& vertex_map);
   void add_child_to_parent(moab::EntityHandle child,
                            moab::EntityHandle parent, int sense);
+  void add_child_to_parent(moab::EntityHandle child,
+                           moab::EntityHandle parent);
   void add_group(const std::string &name,
                  const std::vector<moab::EntityHandle> &entities);
   void add_mat_ids();
@@ -74,6 +73,7 @@ public:
   std::vector<moab::EntityHandle> get_entities_by_dimension(
       const moab::EntityHandle meshset, const int dimension,
       const bool recursive) const;
+  size_t get_number_of_meshsets();
   void gather_ents();
 
 private:
@@ -81,7 +81,6 @@ private:
 
   moab::Core *mbi;
   VertexInserter::VertexInserter *vi;
-  ent_ent_map vertex_to_set_map;
 
   moab::GeomTopoTool *geom_tool;
   int entity_id[5]; // group, volume, surface, curve IDs (indexed by dim)

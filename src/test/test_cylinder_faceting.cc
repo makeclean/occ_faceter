@@ -37,8 +37,9 @@ TEST_CASE("Faceting cylinder and writing to MOAB", "[cylinder_faceting]") {
   // This is a check if something has changed - I haven't independantly checked this value:
   CHECK(triangles.size() == 322);
 
-  // 2 vertices + 3 edges + 3 faces + 1 volume + 1 material group = 10
-  CHECK(mbtool.get_number_of_meshsets() == 10);
+  // 2 vertices + 3 edges + 3 faces + 1 volume + 1 material group + 1 gather set = 11
+  // TODO: Add more checks that the meshsets are actually as we expect.
+  CHECK(mbtool.get_number_of_meshsets() == 11);
 
   mbtool.gather_ents();
   mbtool.write_geometry(output_path);

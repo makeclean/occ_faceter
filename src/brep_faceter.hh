@@ -16,7 +16,8 @@ struct FacetingTolerance {
 };
 
 void sew_and_facet(TopoDS_Shape &shape, const FacetingTolerance &facet_tol, MBTool &mbtool,
-                   MaterialsMap &mat_map, std::string single_material = "");
+                   MaterialsMap &mat_map, std::string single_material = "",
+                   bool special_case = false);
 void brep_faceter(std::string brep_file, std::string json_file,
                   const FacetingTolerance &facet_tol, std::string h5m_file, bool add_mat_ids);
 std::uint64_t calculate_unique_id(const TopoDS_Shape &shape);

@@ -1,6 +1,7 @@
 // moab includes
 #include "moab/Core.hpp"
 #include "MBTagConventions.hpp"
+#include "moab/GeomTopoTool.hpp"
 
 // cgal includes
 #include "CGAL/Exact_predicates_exact_constructions_kernel.h"
@@ -48,11 +49,25 @@ typedef CGAL::Nef_polyhedron_3<K> Nef_Polyhedron;
 
 moab::Core *MBI = NULL;
 
+namespace moab {
+class GeomTopoTool;
+} 
+
+int surfID = 0;
+int volID = 0;
+
 const char geom_categories[][CATEGORY_TAG_SIZE] = {"Vertex\0",
 						   "Curve\0",
 						   "Surface\0",
 						   "Volume\0",
 						   "Group\0"};
+
+  moab::Tag geometry_dimension_tag, id_tag;
+  moab::Tag faceting_tol_tag, geometry_resabs_tag;
+  moab::Tag category_tag;
+  moab::Tag vol_id_tag, surf_id_tag; // tags for triangles for plotting
+  moab::Tag name_tag;
+  moab::Tag mat_id_tag;
 
 // class to store the new volume information
 class NewVolsMOAB {
@@ -331,6 +346,7 @@ class Build_triangle : public CGAL::Modifier_base<HDS> {
     moab::Range::iterator it;
     int id = 0;
     for ( it = volumes.begin() ; it != volumes.end() ; ++it ) {
+      std::cout << *it << std::endl;
       rval = MBI->tag_get_data(id_tag, &(*it), 1, &id);
       volmap[id] = *it;
     }
@@ -601,18 +617,108 @@ class Build_triangle : public CGAL::Modifier_base<HDS> {
   std::map<int, Polyhedron> geometry_poly;
 };
 
+moab::ErrorCode add_surface_to_volume(moab::EntityHandle surface,
+          moab::EntityHandle volume, int sense) {
+  moab::ErrorCode rval;
+  rval = MBI->add_parent_child(volume, surface);
+  MB_CHK_ERR(rval);
+  moab::GeomTopoTool *geom_tool = new moab::GeomTopoTool(MBI);
+  rval = geom_tool->set_sense(surface, volume, sense);
+  delete geom_tool;
+  return rval;
+}
 
+//  makes a new surface in moab
+moab::ErrorCode make_new_surface(moab::EntityHandle &surface) {
+  surfID++;
+  //  moab::EntityHandle surface;
+  // std::cout << "Created new surface " << surfID << std::endl;
+  
+  moab::ErrorCode rval = MBI->create_meshset(moab::MESHSET_ORDERED, surface);
+  // set the id tag
+  rval = MBI->tag_set_data(id_tag,&surface,1,&surfID);
+  // set the dim tag
+  int dim = 2;
+  rval = MBI->tag_set_data(geometry_dimension_tag,&surface,1,&dim);
+  rval = MBI->tag_set_data(category_tag,&surface,1,&geom_categories[dim]);
+  return moab::MB_SUCCESS;  
+}
+
+// make a new volume meshset 
+moab::ErrorCode make_new_volume(moab::EntityHandle &volume) {
+  volID++;
+
+  // std::cout << "Created new volume " << volID << std::endl;
+  
+  // make a new volume set
+  moab::ErrorCode rval = MBI->create_meshset(moab::MESHSET_ORDERED,volume);
+  // set the id tag
+  rval = MBI->tag_set_data(id_tag,&volume,1,&volID);
+  // set the dim tag
+  int dim = 3;
+  rval = MBI->tag_set_data(geometry_dimension_tag,&volume,1,&dim);
+  rval = MBI->tag_set_data(category_tag,&volume,1,&geom_categories[dim]);
+  return rval;
+}
 
 // 
 int main(int argc, char* argv[]) {
   MBI = new moab::Core();
-  moab::ErrorCode rval = moab::MB_FAILURE;
+    moab::ErrorCode rval = moab::MB_FAILURE;
+
+  rval = MBI->tag_get_handle(GEOM_DIMENSION_TAG_NAME, 1, moab::MB_TYPE_INTEGER, geometry_dimension_tag, moab::MB_TAG_DENSE | moab::MB_TAG_CREAT);
+    MB_CHK_SET_ERR(rval, "Couldnt get geom dim tag");
+    rval = MBI->tag_get_handle(GLOBAL_ID_TAG_NAME, 1, moab::MB_TYPE_INTEGER, id_tag, moab::MB_TAG_DENSE | moab::MB_TAG_CREAT);
+    MB_CHK_SET_ERR(rval, "Couldnt get id tag");
+
+    rval = MBI->tag_get_handle("VOL_ID", 1, moab::MB_TYPE_INTEGER, vol_id_tag, moab::MB_TAG_DENSE | moab::MB_TAG_CREAT);
+    MB_CHK_SET_ERR(rval, "Couldnt get vol_id tag");
+
+    rval = MBI->tag_get_handle("SURF_ID", 1, moab::MB_TYPE_INTEGER, surf_id_tag, moab::MB_TAG_DENSE | moab::MB_TAG_CREAT);
+    MB_CHK_SET_ERR(rval, "Couldnt get surf_id tag");
+    
+    rval = MBI->tag_get_handle("FACETING_TOL", 1, moab::MB_TYPE_DOUBLE, faceting_tol_tag,
+			       moab::MB_TAG_SPARSE | moab::MB_TAG_CREAT);
+    MB_CHK_SET_ERR(rval, "Error creating faceting_tol_tag");
+    rval = MBI->tag_get_handle("GEOMETRY_RESABS", 1, moab::MB_TYPE_DOUBLE, 
+			       geometry_resabs_tag, moab::MB_TAG_SPARSE | moab::MB_TAG_CREAT);
+    MB_CHK_SET_ERR(rval, "Error creating geometry_resabs_tag");
+    
+    rval = MBI->tag_get_handle(CATEGORY_TAG_NAME, CATEGORY_TAG_SIZE, moab::MB_TYPE_OPAQUE, 
+    			       category_tag, moab::MB_TAG_SPARSE | moab::MB_TAG_CREAT);
+    MB_CHK_SET_ERR(rval, "Error creating category_tag");
+
+    rval = MBI->tag_get_handle(NAME_TAG_NAME, NAME_TAG_SIZE, moab::MB_TYPE_OPAQUE,
+                               name_tag, moab::MB_TAG_SPARSE | moab::MB_TAG_CREAT);
+    MB_CHK_SET_ERR(rval, "Error creating name_tag");
+
+    rval = MBI->tag_get_handle("MatID", 1, moab::MB_TYPE_INTEGER,
+                               mat_id_tag, moab::MB_TAG_DENSE | moab::MB_TAG_CREAT);
+    MB_CHK_SET_ERR(rval, "Error creating mat_id_tag");
+
   moab::EntityHandle input_set;
   rval = MBI->create_meshset(moab::MESHSET_SET, input_set); 
   MB_CHK_SET_ERR(rval, "failed to create meshset");
   std::cout << "Loading input file..." << std::endl;
-  rval = MBI->load_file("test.h5m", &input_set);  
+  rval = MBI->create_meshset(moab::MESHSET_SET, input_set); 
+  MB_CHK_SET_ERR(rval, "failed to create meshset");
+
+  moab::EntityHandle s1,v1, s2,v2;
+  rval = make_new_surface(s1);
+  rval = make_new_volume(v1);
+  rval = add_surface_to_volume(s1,v1,1);
+  rval = make_new_surface(s2);
+  rval = make_new_volume(v2);
+  rval = add_surface_to_volume(s2,v2,1);
+
+  rval = MBI->load_file("../../vol1.stl", &s1);
+
+  rval = MBI->load_file("../../vol2.stl", &s2);
   
+  std::cout << rval << std::endl;
+
+  rval = MBI->write_file("intermediate.h5m");
+
   // make the cgal geometry
   MOABInterface *cgal = new MOABInterface();
   cgal->makeCGALGeometryPoly();

@@ -1,6 +1,7 @@
 #include "brep_faceter.hh"
 
 #include <iostream>
+#include <algorithm>
 #include <array>
 #include <map>
 #include <unordered_map>
@@ -127,7 +128,8 @@ std::uint64_t calculate_unique_id(const TopoDS_Shape &shape) {
 void facet_all_volumes(const TopTools_HSequenceOfShape &shape_list,
                        const FacetingTolerance& facet_tol,
                        MBTool &mbtool, MaterialsMap &mat_map,
-                       std::string single_material, bool special_case) {
+                       std::string single_material, bool special_case,
+                       std::vector<std::string> &mat_list) {
   int count = shape_list.Length();
 
   std::vector<TopoDS_Face> uniqueFaces;
@@ -227,6 +229,10 @@ void facet_all_volumes(const TopTools_HSequenceOfShape &shape_list,
   // build a list of volumes for each material
   std::map<std::string, std::vector<moab::EntityHandle>> material_volumes;
 
+  // if given a list of materials, then reverse the order before using pop_back()
+  std::vector<std::string> mats_reversed(mat_list);
+  std::reverse(mats_reversed.begin(), mats_reversed.end());
+
   // create volumes and add surfaces
   for (int i = 1; i <= count; i++) {
     const TopoDS_Shape &shape = shape_list.Value(i);
@@ -253,6 +259,10 @@ void facet_all_volumes(const TopTools_HSequenceOfShape &shape_list,
       } else {
         std::cout << "No material found for ID: " << uniqueID << std::endl;
       }
+    } else if (!mats_reversed.empty()) {
+      std::string material = mats_reversed.back();
+      mats_reversed.pop_back();
+      material_volumes[material].push_back(vol);
     }
   }
 
@@ -302,8 +312,34 @@ void sew_and_facet(TopoDS_Shape &shape, const FacetingTolerance& facet_tol, MBTo
   sew_shapes(shape, shape_list);
   std::cout << "Instanciated " << shape_list.Length() << " items from file" << std::endl;
 
-  facet_all_volumes(shape_list, facet_tol, mbtool, mat_map, single_material, special_case);
+  std::vector<std::string> mat_list;
+  facet_all_volumes(shape_list, facet_tol, mbtool, mat_map, single_material, special_case, mat_list);
 }
+
+void sew_and_facet2(TopoDS_Shape &shape, const FacetingTolerance& facet_tol, MBTool &mbtool,
+                    std::vector<std::string> &mat_list) {
+  TopTools_HSequenceOfShape shape_list;
+  sew_shapes(shape, shape_list);
+  std::cout << "Instanciated " << shape_list.Length() << " items from file" << std::endl;
+
+  std::string single_material = "";
+  bool special_case = false;
+  MaterialsMap mat_map;
+  facet_all_volumes(shape_list, facet_tol, mbtool, mat_map, single_material, special_case, mat_list);
+}
+
+void read_materials_list(std::string text_file, std::vector<std::string> &mat_list) {
+  std::ifstream text_stream(text_file);
+  if (text_stream.fail()) {
+    std::cerr << "Warning: Failed to read file " + text_file << std::endl;
+  } else {
+    std::string line;
+    while (std::getline(text_stream, line)) {
+        mat_list.push_back(line);
+    }
+  }
+}
+
 
 void brep_faceter(std::string brep_file, std::string json_file,
                   const FacetingTolerance& facet_tol, std::string h5m_file,
@@ -313,12 +349,17 @@ void brep_faceter(std::string brep_file, std::string json_file,
   BRepTools::Read(shape, brep_file.c_str(), builder);
 
   MaterialsMap materials_map;
-  read_metadata(json_file, materials_map);
+  std::vector<std::string> materials_list;
+  if (json_file.length() > 5 && json_file.compare(json_file.length() - 5, 5, ".json") == 0) {
+    read_metadata(json_file, materials_map);
+  } else {
+    read_materials_list(json_file, materials_list);
+  }
 
   MBTool mbtool;
   // TODO: review use of GEOMETRY_RESABS
   mbtool.set_faceting_tol_tag(facet_tol.tolerance);
-  sew_and_facet(shape, facet_tol, mbtool, materials_map);
+  sew_and_facet2(shape, facet_tol, mbtool, materials_list);
 
   if (add_mat_ids)
     mbtool.add_mat_ids();

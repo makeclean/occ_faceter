@@ -498,28 +498,14 @@ class Build_triangle : public CGAL::Modifier_base<HDS> {
     Nef_Polyhedron np1(p1);
     Nef_Polyhedron np2(p2);
     
-    Nef_Polyhedron intersect = np2 * np1;
-
-    Nef_Polyhedron up2 = np2 - intersect;
+    Nef_Polyhedron up2 = np1 - np2;
     Polyhedron update2;
     up2.convert_to_polyhedron(update2);
     up2.clear();
 
-    Nef_Polyhedron up1 = np1 - intersect;
-    Polyhedron update1;
-    up1.convert_to_polyhedron(update1);
-    up1.clear();
+    rval = nvm->addPolyhedron(update2,1);
+    rval = nvm->addPolyhedron(p2,2);
 
-    np1.clear();
-    np2.clear();
-
-    Polyhedron difference;
-    intersect.convert_to_polyhedron(difference);
-    intersect.clear();
-
-    rval = nvm->addPolyhedron(update1,1);
-    rval = nvm->addPolyhedron(update2,2);
-    rval = nvm->addPolyhedron(difference,3);
     nvm->write("new_geom.h5m");
 
     return;

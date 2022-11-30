@@ -101,9 +101,6 @@ edge_data make_edge_facets(const TopoDS_Edge &currentEdge,
   // convert TColStd_Array1OfInteger to std::vector<int>
   std::vector<int> &conn = edges_for_moab.connectivity;
   const TColStd_Array1OfInteger &lines = edges->Nodes();
-  // TODO: Confirm this is correct when currentEdge.Orientation() == TopAbs_REVERSED
-  //   - in /Cubit-plugin/.../DAGMCExportCommand.cpp the equivalent list of
-  //     edge nodes is reversed for these edges.
   for (int i = lines.Lower(); i <= lines.Upper(); i++) {
     conn.push_back(lines(i));
   }
@@ -215,7 +212,7 @@ void facet_all_volumes(const TopTools_HSequenceOfShape &shape_list,
             mbtool.add_child_to_parent(meshset, curve);
           }
         }
-        int sense = currentEdge.Orientation() == TopAbs_REVERSED ? moab::SENSE_REVERSE : moab::SENSE_FORWARD;
+        int sense = currentEdge.Orientation() != face.Orientation() ? moab::SENSE_REVERSE : moab::SENSE_FORWARD;
         mbtool.add_child_to_parent(curve, surface, sense);
       }
     }

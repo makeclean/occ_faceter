@@ -109,8 +109,7 @@ void MBTool::set_geometry_tol_tag(double geom_tol) {
 }
 
 moab::EntityHandle MBTool::create_entity_set(int dim) {
-  // TODO: Check meshset options - Cubit-plugin has different behaviour
-  unsigned int options = (dim == 2 || dim == 3) ? moab::MESHSET_ORDERED : moab::MESHSET_SET;
+  unsigned int options = dim == 1 ? moab::MESHSET_ORDERED : moab::MESHSET_SET;
 
   moab::EntityHandle result;
   CHECK_MOAB_RVAL(mbi->create_meshset(options, result));

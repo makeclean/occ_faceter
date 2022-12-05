@@ -291,17 +291,14 @@ void MBTool::build_curve(moab::EntityHandle curve,
   moab::Range edges;
   moab::Range vertices;
 
-  int end_point = 0;
-  (edge_collection_i.connectivity.size() - 2  == 0 ) ?
-  (end_point = edge_collection_i.connectivity.size() - 1) :
-  (end_point = edge_collection_i.connectivity.size() - 2); 
-
   moab::EntityHandle vertex = vertex_map.at(edge_collection_i.connectivity.at(0));
   moab::EntityHandle connection[2];
   connection[1] = vertex;
   vertices.insert(vertex);
 
-  for ( int j = 0 ; j < end_point ; j++ ) {
+  int size_minus_1 = edge_collection_i.connectivity.size() - 1;
+
+  for ( int j = 0 ; j < size_minus_1 ; j++ ) {
     connection[0] = connection[1];
     vertex = vertex_map.at(edge_collection_i.connectivity.at(j+1));
     connection[1] = vertex;

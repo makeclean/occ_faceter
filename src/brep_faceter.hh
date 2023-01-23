@@ -5,7 +5,6 @@
 
 #include "TopoDS_Shape.hxx"
 #include "MBTool.hpp"
-#include "read_metadata.hh"
 
 struct FacetingTolerance {
   float tolerance;
@@ -15,11 +14,11 @@ struct FacetingTolerance {
     : tolerance(tol), is_relative(!is_absolute) {}
 };
 
-void sew_and_facet(TopoDS_Shape &shape, const FacetingTolerance &facet_tol, MBTool &mbtool,
-                   MaterialsMap &mat_map, std::string single_material = "",
-                   bool special_case = false);
+void sew_and_facet2(TopoDS_Shape &shape, const FacetingTolerance& facet_tol, MBTool &mbtool,
+                    std::vector<std::string> &mat_list, std::string single_material = "",
+                    bool special_case = false);
 void brep_faceter(std::string brep_file, std::string json_file,
                   const FacetingTolerance &facet_tol, std::string h5m_file, bool add_mat_ids);
-std::uint64_t calculate_unique_id(const TopoDS_Shape &shape);
+void read_materials_list(std::string text_file, std::vector<std::string> &mat_list);
 
 #endif // BREP_FACETER_HH

@@ -24,9 +24,9 @@ void steps2h5m(std::string input_file, const FacetingTolerance &facet_tol, std::
 
     std::cout << step_file << " : " << material << std::endl;
     std::vector<TopoDS_Shape> breps = step_to_breps(step_file);
-    MaterialsMap emptyMap;
+    std::vector<std::string> emptyList;
     for (TopoDS_Shape shape : breps) {
-      sew_and_facet(shape, facet_tol, mbtool, emptyMap, material);
+      sew_and_facet2(shape, facet_tol, mbtool, emptyList, material);
     }
   }
 

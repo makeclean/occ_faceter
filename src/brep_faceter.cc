@@ -38,11 +38,6 @@
 #include "BRep_Builder.hxx"
 #include "NCollection_IndexedDataMap.hxx"
 
-#include "BRepGProp.hxx"
-#include "GProp_GProps.hxx"
-#include "UniqueId/UniqueId.h" // this file also dep "UniqueId/half.hpp"
-#include "read_metadata.hh"
-
 typedef NCollection_IndexedDataMap<TopoDS_Face, moab::EntityHandle, TopTools_ShapeMapHasher> MapFaceToSurface;
 typedef NCollection_IndexedDataMap<TopoDS_Edge, moab::EntityHandle, TopTools_ShapeMapHasher> MapEdgeToCurve;
 typedef NCollection_IndexedDataMap<TopoDS_Vertex, moab::EntityHandle, TopTools_ShapeMapHasher> MapVertexToMeshset;
@@ -113,18 +108,9 @@ void perform_faceting(const TopoDS_Face &face, const FacetingTolerance& facet_to
   BRepMesh_IncrementalMesh facets(face, facet_tol.tolerance, facet_tol.is_relative, 0.5);
 }
 
-std::uint64_t calculate_unique_id(const TopoDS_Shape &shape) {
-  GProp_GProps v_props;
-  BRepGProp::VolumeProperties(shape, v_props);
-  return PPP::Utilities::geometryUniqueID(v_props.Mass(),
-                                          {v_props.CentreOfMass().X(),
-                                           v_props.CentreOfMass().Y(),
-                                           v_props.CentreOfMass().Z()});
-}
-
 void facet_all_volumes(const TopTools_HSequenceOfShape &shape_list,
                        const FacetingTolerance& facet_tol,
-                       MBTool &mbtool, MaterialsMap &mat_map,
+                       MBTool &mbtool,
                        std::string single_material, bool special_case,
                        std::vector<std::string> &mat_list) {
   int count = shape_list.Length();
@@ -245,17 +231,9 @@ void facet_all_volumes(const TopTools_HSequenceOfShape &shape_list,
 
     // update map from material name to volumes
 
-    // if single_material is set, then ignore mat_map
+    // if single_material is set, then ignore materials list
     if (!single_material.empty()) {
       material_volumes[single_material].push_back(vol);
-    } else if (!mat_map.empty()) {
-      std::uint64_t uniqueID = calculate_unique_id(shape);
-      std::string material = mat_map[uniqueID];
-      if (!material.empty()) {
-        material_volumes[material].push_back(vol);
-      } else {
-        std::cout << "No material found for ID: " << uniqueID << std::endl;
-      }
     } else if (!mats_reversed.empty()) {
       std::string material = mats_reversed.back();
       mats_reversed.pop_back();
@@ -303,26 +281,19 @@ void sew_shapes(const TopoDS_Shape &shape, TopTools_HSequenceOfShape &sewed_shap
   }
 }
 
-void sew_and_facet(TopoDS_Shape &shape, const FacetingTolerance& facet_tol, MBTool &mbtool,
-                   MaterialsMap &mat_map, std::string single_material, bool special_case) {
-  TopTools_HSequenceOfShape shape_list;
-  sew_shapes(shape, shape_list);
-  std::cout << "Instanciated " << shape_list.Length() << " items from file" << std::endl;
-
-  std::vector<std::string> mat_list;
-  facet_all_volumes(shape_list, facet_tol, mbtool, mat_map, single_material, special_case, mat_list);
-}
-
 void sew_and_facet2(TopoDS_Shape &shape, const FacetingTolerance& facet_tol, MBTool &mbtool,
-                    std::vector<std::string> &mat_list) {
+                    std::vector<std::string> &mat_list, std::string single_material,
+                    bool special_case) {
   TopTools_HSequenceOfShape shape_list;
   sew_shapes(shape, shape_list);
   std::cout << "Instanciated " << shape_list.Length() << " items from file" << std::endl;
 
-  std::string single_material = "";
-  bool special_case = false;
-  MaterialsMap mat_map;
-  facet_all_volumes(shape_list, facet_tol, mbtool, mat_map, single_material, special_case, mat_list);
+  if (mat_list.size() < shape_list.Length()) {
+    std::cerr << "Error: Material list is too short." << std::endl;
+    return;
+  }
+
+  facet_all_volumes(shape_list, facet_tol, mbtool, single_material, special_case, mat_list);
 }
 
 void read_materials_list(std::string text_file, std::vector<std::string> &mat_list) {
@@ -337,21 +308,15 @@ void read_materials_list(std::string text_file, std::vector<std::string> &mat_li
   }
 }
 
-
-void brep_faceter(std::string brep_file, std::string json_file,
+void brep_faceter(std::string brep_file, std::string materials_list_file,
                   const FacetingTolerance& facet_tol, std::string h5m_file,
                   bool add_mat_ids) {
   TopoDS_Shape shape;
   BRep_Builder builder;
   BRepTools::Read(shape, brep_file.c_str(), builder);
 
-  MaterialsMap materials_map;
   std::vector<std::string> materials_list;
-  if (json_file.length() > 5 && json_file.compare(json_file.length() - 5, 5, ".json") == 0) {
-    read_metadata(json_file, materials_map);
-  } else {
-    read_materials_list(json_file, materials_list);
-  }
+  read_materials_list(materials_list_file, materials_list);
 
   MBTool mbtool;
   // TODO: review use of GEOMETRY_RESABS

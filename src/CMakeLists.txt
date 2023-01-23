@@ -15,7 +15,7 @@ ADD_LIBRARY(mbtool MBTool.cpp)
 # occ faceter and step2breps
 LINK_DIRECTORIES("/usr/lib/x86_64-linux-gnu/")
 IF(OCE_FOUND OR OCC_FOUND )
-  ADD_LIBRARY(brep_faceter brep_faceter.cc read_metadata.cc)
+  ADD_LIBRARY(brep_faceter brep_faceter.cc)
   ADD_EXECUTABLE(occ_faceter occ_faceter.cc steps2h5m.cc step2breps.cc)
   SET(OCE_LINK_LIBS TKSTEP TKXSBase TKernel TKMath TKMesh TKTopAlgo TKBRep TKSTEPBase TKPrim)
   TARGET_LINK_LIBRARIES(brep_faceter mbtool vertex_inserter ${MOAB_LIBRARIES} ${OCE_LINK_LIBS})

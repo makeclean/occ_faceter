@@ -18,14 +18,14 @@ int main(int argc, char *argv[]) {
   std::string materials_file;
 
   po.addRequiredArg<std::string>("input_file",
-                                 "Path to brep and json output from PPP, or json list of step files and materials",
+                                 "Path to brep output from overlap_checker/merge_solids and a list of materials, or json list of step files and materials",
                                  &input_file);
 
   po.addOpt<double>("tolerance,t", "Faceting tolerance (default " + std::to_string(tolerance) + ")", &tolerance);
   po.addOpt<void>("absolute_tol,a", "Treat faceting tolerance as absolute (default is relative)", &tol_is_absolute);
   po.addOpt<std::string>("output_file,o", "Path to output file (default "+ output_file + ")", &output_file);
   po.addOpt<void>("add_mat_ids,m", "Add MatID to every triangle (default " + std::string(add_mat_ids ? "true)" : "false)"), &add_mat_ids);
-  po.addOpt<std::string>("materials_file,f", "File containing list of materials in same order as volumes (default is .brep root + _metadata.json)", &materials_file);
+  po.addOpt<std::string>("materials_file,f", "File containing list of materials in same order as volumes (default is .brep root + _materials.txt)", &materials_file);
 
   po.parseCommandLine(argc, argv);
 
@@ -38,16 +38,16 @@ int main(int argc, char *argv[]) {
   if (has_ending(input_file, ".json")) {
     steps2h5m(input_file, facet_tol, output_file);
   } else if (has_ending(input_file, ".brep")) {
-    // expecting a json file with similar path to the brep file,
-    // but with ".brep" replaced by "_metadata.json"
-    std::string json_file = input_file.substr(0, input_file.length() - 5) + "_metadata.json";
+    // expecting a text file with similar path to the brep file,
+    // but with ".brep" replaced by "_materials.txt"
+    std::string txt_file = input_file.substr(0, input_file.length() - 5) + "_materials.txt";
 
-    // override default path to json file (with a file which might not be json)
+    // override default path to materials list
     if (!materials_file.empty()) {
-      json_file = materials_file;
+      txt_file = materials_file;
     }
 
-    brep_faceter(input_file, json_file, facet_tol, output_file, add_mat_ids);
+    brep_faceter(input_file, txt_file, facet_tol, output_file, add_mat_ids);
   } else {
     std::cerr << "Error: Path to input file must end with .json or .brep" << std::endl;
     return 1;

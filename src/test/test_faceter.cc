@@ -1,7 +1,6 @@
 #define CATCH_CONFIG_MAIN
 #include "catch.hpp"
 #include "brep_faceter.hh"
-#include "read_metadata.hh"
 #include "BRep_Builder.hxx"
 #include "BRepTools.hxx"
 #include "moab/GeomQueryTool.hpp"
@@ -15,7 +14,7 @@ TEST_CASE("Faceting BREP and writing to MOAB", "[faceter]") {
   mbtool.set_faceting_tol_tag(facet_tol.tolerance);
 
   const char *input_path = "gluedCompSolid.brep";
-  const char *metadata_path = "gluedCompSolid_metadata.json";
+  const char *materials_path = "gluedCompSolid_materials.txt";
   const char *output_path = "test_output.h5m";
 
   TopoDS_Shape shape;
@@ -25,13 +24,13 @@ TEST_CASE("Faceting BREP and writing to MOAB", "[faceter]") {
 
   REQUIRE(!shape.IsNull());
 
-  MaterialsMap materials_map;
-  read_metadata(metadata_path, materials_map);
+  std::vector<std::string> materials_list;
+  read_materials_list(materials_path, materials_list);
 
   // Temporarily ignoring the materials map, and creating an empty material
   // group - TODO: Fix materials in comparison Cubit output, and undo this hack
   bool temporary_hack = true;
-  sew_and_facet(shape, facet_tol, mbtool, materials_map, "", temporary_hack);
+  sew_and_facet2(shape, facet_tol, mbtool, materials_list, "", temporary_hack);
 
   std::vector<moab::EntityHandle> triangles = mbtool.get_entities_by_dimension(0, 2, true);
   CHECK(triangles.size() == 22);

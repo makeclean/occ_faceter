@@ -26,11 +26,10 @@ TEST_CASE("Faceting cylinder and writing to MOAB", "[cylinder_faceting]") {
 
   REQUIRE(!shape.IsNull());
 
-  MaterialsMap materials_map;
-  std::uint64_t uniqueID = calculate_unique_id(shape);
-  materials_map[uniqueID] = "testmat";
+  std::vector<std::string> materials_list;
+  materials_list.push_back("testmat");
 
-  sew_and_facet(shape, facet_tol, mbtool, materials_map);
+  sew_and_facet2(shape, facet_tol, mbtool, materials_list);
 
   std::vector<moab::EntityHandle> triangles = mbtool.get_entities_by_dimension(0, 2, true);
 

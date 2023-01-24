@@ -16,6 +16,7 @@ int main(int argc, char *argv[]) {
   bool tol_is_absolute = false;
   bool add_mat_ids = false;
   std::string materials_file;
+  double scale_factor = 0.1;
 
   po.addRequiredArg<std::string>("input_file",
                                  "Path to brep output from overlap_checker/merge_solids and a list of materials, or json list of step files and materials",
@@ -26,6 +27,7 @@ int main(int argc, char *argv[]) {
   po.addOpt<std::string>("output_file,o", "Path to output file (default "+ output_file + ")", &output_file);
   po.addOpt<void>("add_mat_ids,m", "Add MatID to every triangle (default " + std::string(add_mat_ids ? "true)" : "false)"), &add_mat_ids);
   po.addOpt<std::string>("materials_file,f", "File containing list of materials in same order as volumes (default is .brep root + _materials.txt)", &materials_file);
+  po.addOpt<double>("scale_factor,s", "Scale factor (default " + std::to_string(scale_factor) + " to convert from mm to cm)", &scale_factor);
 
   po.parseCommandLine(argc, argv);
 
@@ -47,7 +49,7 @@ int main(int argc, char *argv[]) {
       txt_file = materials_file;
     }
 
-    brep_faceter(input_file, txt_file, facet_tol, output_file, add_mat_ids);
+    brep_faceter(input_file, txt_file, facet_tol, output_file, add_mat_ids, scale_factor);
   } else {
     std::cerr << "Error: Path to input file must end with .json or .brep" << std::endl;
     return 1;

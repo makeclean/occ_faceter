@@ -44,6 +44,7 @@ public:
   MBTool();
   ~MBTool();
 
+  void set_scale_factor(double scale_factor);
   void set_faceting_tol_tag(double faceting_tol);
   void set_geometry_tol_tag(double geom_tol);
   moab::EntityHandle make_new_volume();
@@ -77,6 +78,7 @@ public:
   void gather_ents();
 
 private:
+  moab::EntityHandle find_or_create_vertex(std::array<double,3> point);
   moab::EntityHandle create_entity_set(int dim);
 
   moab::Core *mbi;
@@ -92,5 +94,6 @@ private:
   moab::Tag vol_id_tag, surf_id_tag; // tags for triangles for plotting
   moab::Tag name_tag;
   moab::Tag mat_id_tag;
+  double scale_factor;
 };
 #endif // MBTOOL_HPP

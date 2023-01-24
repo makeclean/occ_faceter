@@ -310,7 +310,7 @@ void read_materials_list(std::string text_file, std::vector<std::string> &mat_li
 
 void brep_faceter(std::string brep_file, std::string materials_list_file,
                   const FacetingTolerance& facet_tol, std::string h5m_file,
-                  bool add_mat_ids) {
+                  bool add_mat_ids, double scale_factor) {
   TopoDS_Shape shape;
   BRep_Builder builder;
   BRepTools::Read(shape, brep_file.c_str(), builder);
@@ -321,6 +321,7 @@ void brep_faceter(std::string brep_file, std::string materials_list_file,
   MBTool mbtool;
   // TODO: review use of GEOMETRY_RESABS
   mbtool.set_faceting_tol_tag(facet_tol.tolerance);
+  mbtool.set_scale_factor(scale_factor);
   sew_and_facet2(shape, facet_tol, mbtool, materials_list);
 
   if (add_mat_ids)

@@ -18,7 +18,8 @@ void sew_and_facet2(TopoDS_Shape &shape, const FacetingTolerance& facet_tol, MBT
                     std::vector<std::string> &mat_list, std::string single_material = "",
                     bool special_case = false);
 void brep_faceter(std::string brep_file, std::string json_file,
-                  const FacetingTolerance &facet_tol, std::string h5m_file, bool add_mat_ids);
+                  const FacetingTolerance &facet_tol, std::string h5m_file,
+                  bool add_mat_ids, double scale_factor);
 void read_materials_list(std::string text_file, std::vector<std::string> &mat_list);
 
 #endif // BREP_FACETER_HH

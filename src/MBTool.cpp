@@ -38,6 +38,7 @@ raise_moab_error(moab::ErrorCode rval, const char *file, const int line, const c
 
 // default constructor
 MBTool::MBTool() {
+  scale_factor = 1;
   mbi = nullptr;
   geom_tool = nullptr;
   vi = nullptr;
@@ -96,6 +97,10 @@ MBTool::~MBTool() {
   delete vi;
   delete geom_tool;
   delete mbi;
+}
+
+void MBTool::set_scale_factor(double x) {
+  scale_factor = x;
 }
 
 void MBTool::set_faceting_tol_tag(double faceting_tol) {
@@ -203,6 +208,22 @@ void MBTool::add_child_to_parent(moab::EntityHandle vertex,
   CHECK_MOAB_RVAL(mbi->add_parent_child(curve, vertex));
 }
 
+// check for the existence of a vertex, and create a new one if necessary
+moab::EntityHandle MBTool::find_or_create_vertex(std::array<double,3> coord) {
+    if (scale_factor != 1) {
+        coord[0] *= scale_factor;
+        coord[1] *= scale_factor;
+        coord[2] *= scale_factor;
+    }
+
+    moab::EntityHandle vert;
+    moab::ErrorCode insert_rval = vi->insert_vertex(coord, vert);
+    if (insert_rval != moab::MB_ENTITY_NOT_FOUND) {
+      CHECK_MOAB_RVAL(insert_rval);
+    }
+    return vert;
+}
+
 void MBTool::generate_facet_vertex_map(facet_vertex_map& vertex_map,
                                        const facet_coords& coords) {
   vertex_map.clear();
@@ -210,14 +231,7 @@ void MBTool::generate_facet_vertex_map(facet_vertex_map& vertex_map,
   // for each coordinate in the surface make the moab vertex
   int idx = 1; // index start at 1!!
   for ( std::array<double,3> coord : coords ) {
-    moab::EntityHandle vert;
-    // check for the existence of a vertex, and create a new one if necessary
-    moab::ErrorCode insert_rval = vi->insert_vertex(coord,vert);
-    if (insert_rval != moab::MB_ENTITY_NOT_FOUND) {
-      CHECK_MOAB_RVAL(insert_rval);
-    }
-
-    vertex_map[idx] = vert;
+    vertex_map[idx] = find_or_create_vertex(coord);
     idx++;
   }
 }
@@ -225,14 +239,7 @@ void MBTool::generate_facet_vertex_map(facet_vertex_map& vertex_map,
 void MBTool::add_node_to_meshset(moab::EntityHandle meshset,
   std::array<double,3> coord) {
 
-  // check for the existence of a node, and create a new one if necessary
-  moab::EntityHandle node;
-  moab::ErrorCode insert_rval = vi->insert_vertex(coord, node);
-  if (insert_rval != moab::MB_ENTITY_NOT_FOUND) {
-    CHECK_MOAB_RVAL(insert_rval);
-  }
-
-  // add node to meshset
+  moab::EntityHandle node = find_or_create_vertex(coord);
   CHECK_MOAB_RVAL(mbi->add_entities(meshset, &node, 1));
 }
 

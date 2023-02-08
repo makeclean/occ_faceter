@@ -1,7 +1,9 @@
+# build code in larger inner image containing compilers and -dev packages
 FROM ubuntu:latest AS inner
 
 ENV DEBIAN_FRONTEND=noninteractive
 
+# get system packages installed
 RUN apt-get update \
  && apt-get install -y --no-install-recommends \
       automake autoconf libtool \
@@ -19,7 +21,7 @@ RUN apt-get update \
       tzdata \
  && rm -rf /var/lib/apt/lists/*
 
-# clone once to speed rebuilds up
+# clone repos once to speed rebuilds up
 RUN git clone --depth=1 https://bitbucket.org/fathomteam/moab.git /moab \
  && cd /moab \
  && autoreconf -fi
@@ -30,6 +32,7 @@ RUN git clone --depth=1 --recurse-submodules --shallow-submodules https://github
 
 RUN git clone --depth=1 --branch=new-materials https://github.com/johnnonweiler/occ_faceter /occ_faceter
 
+# build and install MOAB
 RUN mkdir /build && cd /build \
  && /moab/configure \
       --enable-optimize \
@@ -41,27 +44,32 @@ RUN mkdir /build && cd /build \
  && make install \
  && rm -Rf /build
 
-# not sure why "make install" also copies 64MB of test scripts and data, let's clean those up
+# build and install DAGMC.  not sure why "make install" also copies 64MB of
+# test scripts and data, let's clean those up
 RUN mkdir /build && cd /build \
  && cmake /DAGMC -DMOAB_DIR=/usr/local -DCMAKE_INSTALL_PREFIX=/usr/local \
  && make -j4 all test \
  && make install \
  && rm -Rf /build /usr/local/tests
 
+# build and install overlap_checker
 RUN mkdir /build && cd /build \
  && cmake /overlap_checker -DCMAKE_INSTALL_PREFIX=/usr/local \
  && make -j4 \
  && make install \
  && rm -Rf /build
 
+# build and install occ_faceter
 # RUN mkdir /build && cd /build \
 #  && cmake /occ_faceter -DCMAKE_BUILD_TYPE=Release -DMOAB_ROOT=/usr/local -DCMAKE_INSTALL_PREFIX=/usr/local \
 #  && make -j4 \
 #  && make install \
 #  && rm -Rf /build
 
+# resulting image
 FROM ubuntu:latest
 
+# install runtime packages (OCCT pulls in all sorts of crap)
 RUN apt-get update \
  && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
       ca-certificates \
@@ -71,3 +79,5 @@ RUN apt-get update \
       libtbb12 \
  && rm -rf /var/lib/apt/lists/*
 
+# copy binaries that was built above
+COPY --from=inner /usr/local/ /usr/local/

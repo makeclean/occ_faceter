@@ -15,6 +15,7 @@ RUN apt-get update \
       libhdf5-dev \
       liblapack-dev \
       libocct-foundation-dev libocct-data-exchange-dev libocct-modeling-data-dev \
+      libocct-draw-dev occt-misc \
       libcgal-dev \
       libtbb-dev \
       python3 \

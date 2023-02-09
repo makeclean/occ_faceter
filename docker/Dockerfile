@@ -61,11 +61,11 @@ RUN mkdir /build && cd /build \
  && rm -Rf /build
 
 # build and install occ_faceter
-# RUN mkdir /build && cd /build \
-#  && cmake /occ_faceter -DCMAKE_BUILD_TYPE=Release -DMOAB_ROOT=/usr/local -DCMAKE_INSTALL_PREFIX=/usr/local \
-#  && make -j4 \
-#  && make install \
-#  && rm -Rf /build
+RUN mkdir /build && cd /build \
+ && cmake /occ_faceter -DCMAKE_BUILD_TYPE=Release -DMOAB_ROOT=/usr/local -DCMAKE_INSTALL_PREFIX=/usr/local \
+ && make -j4 \
+ && make install \
+ && rm -Rf /build
 
 # resulting image
 FROM ubuntu:latest
@@ -75,7 +75,7 @@ RUN apt-get update \
  && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
       ca-certificates \
       libhdf5-103-1 \
-      libocct-foundation-7.5 libocct-data-exchange-7.5 libocct-modeling-data-7.5 \
+      libocct-foundation-7.5 libocct-data-exchange-7.5 libocct-modeling-data-7.5 libocct-draw-7.5 \
       liblapack3 \
       libtbb12 \
  && rm -rf /var/lib/apt/lists/*

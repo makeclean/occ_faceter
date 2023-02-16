@@ -88,3 +88,7 @@ RUN apt-get update \
 
 # copy binaries that was built above
 COPY --from=inner /usr/local/ /usr/local/
+
+# also copy source over
+COPY --from=inner /occ_faceter/ /occ_faceter/
+COPY --from=inner /overlap_checker /overlap_checker/

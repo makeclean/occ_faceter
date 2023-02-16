@@ -11,13 +11,16 @@ RUN apt-get update \
       cmake \
       gfortran \
       git ca-certificates \
+      libcgal-dev \
       libeigen3-dev \
       libhdf5-dev \
       liblapack-dev \
-      libocct-foundation-dev libocct-data-exchange-dev libocct-modeling-data-dev \
-      libocct-draw-dev occt-misc \
-      libcgal-dev \
+      libocct-data-exchange-dev \
+      libocct-draw-dev \
+      libocct-foundation-dev \
+      libocct-modeling-data-dev \
       libtbb-dev \
+      occt-misc \
       python3 \
       tzdata \
  && rm -rf /var/lib/apt/lists/*
@@ -75,8 +78,11 @@ RUN apt-get update \
  && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
       ca-certificates \
       libhdf5-103-1 \
-      libocct-foundation-7.5 libocct-data-exchange-7.5 libocct-modeling-data-7.5 libocct-draw-7.5 \
       liblapack3 \
+      libocct-data-exchange-7.5 \
+      libocct-draw-7.5 \
+      libocct-foundation-7.5 \
+      libocct-modeling-data-7.5 \
       libtbb12 \
  && rm -rf /var/lib/apt/lists/*
 

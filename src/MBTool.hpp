@@ -1,15 +1,13 @@
 #ifndef MBTOOL_HPP
 #define MBTOOL_HPP
 
-#include "moab/Core.hpp"
-#include "MBTagConventions.hpp"
-
-#include <vector>
 #include <array>
 #include <map>
-#include <unordered_map>
+#include <vector>
 
-#include "rtree/RTree.h"
+#include "moab/Core.hpp"
+#include "MBTagConventions.hpp"
+#include "xyz_to_entity_map.hh"
 
 namespace moab {
 class GeomTopoTool;
@@ -21,29 +19,6 @@ public:
     : error_code(error_code), std::runtime_error(what) {}
 
   moab::ErrorCode error_code;
-};
-
-struct xyz_coords {
-  std::array<double, 3> coords;
-
-  xyz_coords(const std::array<double, 3> &values) : coords(values) {}
-};
-
-inline bool operator==(const xyz_coords& lhs, const xyz_coords& rhs) {
-    return lhs.coords == rhs.coords;
-}
-
-// custom specialization of std::hash can be injected in namespace std
-template<>
-struct std::hash<xyz_coords>
-{
-    std::size_t operator()(xyz_coords const& c) const noexcept
-    {
-        std::size_t h1 = std::hash<double>{}(c.coords[0]);
-        std::size_t h2 = std::hash<double>{}(c.coords[1]);
-        std::size_t h3 = std::hash<double>{}(c.coords[2]);
-        return h1 ^ (h2 << 1) ^ (h3 << 2); // or use boost::hash_combine
-    }
 };
 
 typedef std::vector<std::array<double, 3>> facet_coords;
@@ -105,7 +80,7 @@ private:
   moab::EntityHandle create_entity_set(int dim);
 
   moab::Core *mbi;
-  std::unordered_map<xyz_coords, moab::EntityHandle> verticies;
+  xyz_to_entity_map verticies;
 
   moab::GeomTopoTool *geom_tool;
   int entity_id[5]; // group, volume, surface, curve IDs (indexed by dim)

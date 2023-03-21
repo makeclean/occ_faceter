@@ -41,7 +41,6 @@ MBTool::MBTool() {
   scale_factor = 1;
   mbi = nullptr;
   geom_tool = nullptr;
-  vi = nullptr;
 
   for (int i = 0; i < 5; i++) {
     entity_id[i] = 0;
@@ -51,9 +50,6 @@ MBTool::MBTool() {
   try {
     mbi = new moab::Core();
     geom_tool = new moab::GeomTopoTool(mbi);
-
-    // new vertex inserter
-    vi = new VertexInserter::VertexInserter(mbi,1.e-6); // should pass the tolernace by arg
 
     // make a new meshset to put stuff in
     CHECK_MOAB_RVAL(mbi->create_meshset(moab::MESHSET_SET, rootset));
@@ -84,7 +80,6 @@ MBTool::MBTool() {
     CHECK_MOAB_RVAL(mbi->tag_get_handle("MatID", 1, moab::MB_TYPE_INTEGER,
                                mat_id_tag, moab::MB_TAG_DENSE | moab::MB_TAG_CREAT));
   } catch (...) {
-    if (vi) delete vi;
     if (geom_tool) delete geom_tool;
     if (mbi) delete mbi;
     throw;
@@ -94,7 +89,6 @@ MBTool::MBTool() {
 // destructor
 MBTool::~MBTool() {
   // destroy in reverse order from creation
-  delete vi;
   delete geom_tool;
   delete mbi;
 }
@@ -216,12 +210,15 @@ moab::EntityHandle MBTool::find_or_create_vertex(std::array<double,3> coord) {
         coord[2] *= scale_factor;
     }
 
-    moab::EntityHandle vert;
-    moab::ErrorCode insert_rval = vi->insert_vertex(coord, vert);
-    if (insert_rval != moab::MB_ENTITY_NOT_FOUND) {
-      CHECK_MOAB_RVAL(insert_rval);
+    moab::EntityHandle result;
+    auto it = verticies.find(coord);
+    if (it == verticies.end()) {
+      CHECK_MOAB_RVAL(mbi->create_vertex(coord.data(), result));
+      verticies.emplace(std::make_pair(coord, result));
+    } else {
+      result = it->second;
     }
-    return vert;
+    return result;
 }
 
 void MBTool::generate_facet_vertex_map(facet_vertex_map& vertex_map,

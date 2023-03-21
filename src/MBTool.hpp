@@ -7,9 +7,9 @@
 #include <vector>
 #include <array>
 #include <map>
+#include <unordered_map>
 
 #include "rtree/RTree.h"
-#include "vertex_inserter.hh"
 
 namespace moab {
 class GeomTopoTool;
@@ -23,7 +23,30 @@ public:
   moab::ErrorCode error_code;
 };
 
-typedef std::vector<std::array<double,3>> facet_coords;
+struct xyz_coords {
+  std::array<double, 3> coords;
+
+  xyz_coords(const std::array<double, 3> &values) : coords(values) {}
+};
+
+inline bool operator==(const xyz_coords& lhs, const xyz_coords& rhs) {
+    return lhs.coords == rhs.coords;
+}
+
+// custom specialization of std::hash can be injected in namespace std
+template<>
+struct std::hash<xyz_coords>
+{
+    std::size_t operator()(xyz_coords const& c) const noexcept
+    {
+        std::size_t h1 = std::hash<double>{}(c.coords[0]);
+        std::size_t h2 = std::hash<double>{}(c.coords[1]);
+        std::size_t h3 = std::hash<double>{}(c.coords[2]);
+        return h1 ^ (h2 << 1) ^ (h3 << 2); // or use boost::hash_combine
+    }
+};
+
+typedef std::vector<std::array<double, 3>> facet_coords;
 typedef std::vector<std::array<int, 3>> facet_connectivity;
 typedef std::map<moab::EntityHandle, moab::EntityHandle> ent_ent_map;
 
@@ -82,7 +105,7 @@ private:
   moab::EntityHandle create_entity_set(int dim);
 
   moab::Core *mbi;
-  VertexInserter::VertexInserter *vi;
+  std::unordered_map<xyz_coords, moab::EntityHandle> verticies;
 
   moab::GeomTopoTool *geom_tool;
   int entity_id[5]; // group, volume, surface, curve IDs (indexed by dim)

@@ -221,7 +221,13 @@ moab::EntityHandle MBTool::find_or_create_vertex(std::array<double,3> coord) {
     return result;
 }
 
-void MBTool::add_entities(moab::EntityHandle parent, const std::vector<moab::EntityHandle> &children) {
+moab::EntityHandle MBTool::create_triangle(const std::array<moab::EntityHandle,3> &verticies) {
+  moab::EntityHandle result;
+  CHECK_MOAB_RVAL(mbi->create_element(moab::MBTRI,verticies.data(),3,result));
+  return result;
+}
+
+void MBTool::add_entities(moab::EntityHandle parent, const entity_vector &children) {
   CHECK_MOAB_RVAL(mbi->add_entities(parent, children.data(), children.size()));
 }
 
@@ -230,46 +236,6 @@ void MBTool::add_node_to_meshset(moab::EntityHandle meshset,
 
   moab::EntityHandle node = find_or_create_vertex(coord);
   CHECK_MOAB_RVAL(mbi->add_entities(meshset, &node, 1));
-}
-
-// add facets to surface
-void MBTool::add_facets_to_surface(moab::EntityHandle surface,
-  const facet_connectivity& connectivity_list, const facet_verticies& verticies) {
-  add_entities(surface, verticies);
-
-  std::vector<moab::EntityHandle> triangles;
-  for ( std::array<int,3> connectivity : connectivity_list) {
-    moab::EntityHandle tri;
-    moab::EntityHandle connections[3];
-    connections[0] = verticies.at(connectivity[0]);
-    connections[1] = verticies.at(connectivity[1]);
-    connections[2] = verticies.at(connectivity[2]);
-
-    if (connections[2] == connections[1] ||
-        connections[1] == connections[0] ||
-        connections[2] == connections[0] ) {
-      degenerate_triangle_count++;
-    } else {
-      CHECK_MOAB_RVAL(mbi->create_element(moab::MBTRI,connections,3,tri));
-      triangles.push_back(tri);
-    }
-  }
-
-  add_entities(surface, triangles);
-
-  /*
-  // tag the triangles with their volume id
-  int vol_value = volID;
-  const void *vol_ptr = &vol_value;
-  // tag the triangles with their surface id
-  int surf_value = surfID;
-  const void *surf_ptr = &surf_value;
-
-  for ( moab::EntityHandle triangle : triangles ) {
-    rval = mbi->tag_set_data(vol_id_tag, &triangle,1, vol_ptr);
-    rval = mbi->tag_set_data(surf_id_tag, &triangle,1, surf_ptr);
-  }
-  */
 }
 
 // add curves to surface

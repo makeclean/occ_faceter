@@ -48,31 +48,51 @@ struct facet_data {
   facet_verticies verticies;
 };
 
-facet_data make_surface_facets(MBTool &mbtool,
-                               const Poly_Triangulation &triangulation,
-                               const TopLoc_Location &location) {
-  facet_data facets_for_moab;
-
+entity_vector make_surface_verticies(MBTool &mbtool,
+                                     moab::EntityHandle surface,
+                                     const Poly_Triangulation &triangulation,
+                                     const TopLoc_Location &location) {
   const gp_Trsf &local_transform = location;
-
+  facet_verticies verticies;
   // retrieve facet data
   for (int i = 1; i <= triangulation.NbNodes(); i++) {
     Standard_Real x, y, z;
     triangulation.Node(i).Coord(x, y, z);
     local_transform.Transforms(x, y, z);
-    facets_for_moab.verticies.push_back(mbtool.find_or_create_vertex({x, y, z}));
+    verticies.push_back(mbtool.find_or_create_vertex({x, y, z}));
   }
+  mbtool.add_entities(surface, verticies);
+  return verticies;
+}
+
+void make_surface_facets(MBTool &mbtool,
+                        moab::EntityHandle surface,
+                        const Poly_Triangulation &triangulation,
+                        const facet_verticies &verticies) {
+  entity_vector triangles;
+
   //     std::cout << "Face has " << tris.Length() << " triangles" << std::endl;
   for (int i = 1; i <= triangulation.NbTriangles(); i++) {
     // get the node indexes for this triangle
     const Poly_Triangle &tri = triangulation.Triangle(i);
 
-    // copy the facet_data
     int a, b, c;
     tri.Get(a, b, c);
-    facets_for_moab.connectivity.push_back({a - 1, b - 1, c - 1});
+    // subtract one because OCC uses one based indexing
+    std::array<moab::EntityHandle,3> connections = {
+      verticies[a - 1],
+      verticies[b - 1],
+      verticies[c - 1],
+    };
+    if (verticies[2] == verticies[1] ||
+        verticies[1] == verticies[0] ||
+        verticies[2] == verticies[0] ) {
+      mbtool.note_degenerate_triangle();
+    } else {
+      triangles.push_back(mbtool.create_triangle(connections));
+    }
   }
-  return facets_for_moab;
+  mbtool.add_entities(surface, triangles);
 }
 
 // make the edge facets
@@ -155,8 +175,9 @@ void facet_all_volumes(const TopTools_HSequenceOfShape &shape_list,
       n_surfaces_without_facets++;
     } else {
       // make facets for current face
-      facet_data facets = make_surface_facets(mbtool, triangulation, location);
-      mbtool.add_facets_to_surface(surface, facets.connectivity, facets.verticies);
+      entity_vector verticies = make_surface_verticies(mbtool, surface, triangulation, location);
+
+      make_surface_facets(mbtool, surface, triangulation, verticies);
 
       // add curves to surface
       TopTools_IndexedMapOfShape edges;
@@ -170,7 +191,7 @@ void facet_all_volumes(const TopTools_HSequenceOfShape &shape_list,
           edgeMap.Add(currentEdge, curve);
 
           edge_data edges = make_edge_facets(currentEdge, triangulation, location);
-          mbtool.build_curve(curve, edges, facets.verticies);
+          mbtool.build_curve(curve, edges, verticies);
 
           // add vertices to edges
           TopTools_IndexedMapOfShape vertices;

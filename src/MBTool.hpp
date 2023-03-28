@@ -46,8 +46,7 @@ public:
 
   void write_geometry(const std::string &filename);
 
-  void generate_facet_vertex_map(facet_vertex_map& vertex_map,
-                                 const facet_coords& coords);
+  moab::EntityHandle find_or_create_vertex(std::array<double,3> point);
   void add_node_to_meshset(moab::EntityHandle meshset,
                            std::array<double,3> coord);
   void add_facets_to_surface(moab::EntityHandle surface,
@@ -70,7 +69,6 @@ public:
   void gather_ents();
 
 private:
-  moab::EntityHandle find_or_create_vertex(std::array<double,3> point);
   moab::EntityHandle create_entity_set(int dim);
 
   moab::Core *mbi;

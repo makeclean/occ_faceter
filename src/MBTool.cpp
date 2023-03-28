@@ -221,18 +221,6 @@ moab::EntityHandle MBTool::find_or_create_vertex(std::array<double,3> coord) {
     return result;
 }
 
-void MBTool::generate_facet_vertex_map(facet_vertex_map& vertex_map,
-                                       const facet_coords& coords) {
-  vertex_map.clear();
-
-  // for each coordinate in the surface make the moab vertex
-  int idx = 1; // index start at 1!!
-  for ( std::array<double,3> coord : coords ) {
-    vertex_map[idx] = find_or_create_vertex(coord);
-    idx++;
-  }
-}
-
 void MBTool::add_node_to_meshset(moab::EntityHandle meshset,
   std::array<double,3> coord) {
 

@@ -49,11 +49,12 @@ struct TriangulationWithLocation {
 
 // convenient return for facets
 struct facet_data {
-  facet_coords coords;
   facet_connectivity connectivity;
+  facet_vertex_map vertex_map;
 };
 
-facet_data make_surface_facets(const TopoDS_Face &currentFace,
+facet_data make_surface_facets(MBTool &mbtool,
+                               const TopoDS_Face &currentFace,
                                const TriangulationWithLocation &facetData) {
   facet_data facets_for_moab;
 
@@ -65,9 +66,7 @@ facet_data make_surface_facets(const TopoDS_Face &currentFace,
     Standard_Real x, y, z;
     triangles->Node(i).Coord(x, y, z);
     local_transform.Transforms(x, y, z);
-    std::array<double, 3> coordinates;
-    coordinates[0] = x, coordinates[1] = y, coordinates[2] = z;
-    facets_for_moab.coords.push_back(coordinates);
+    facets_for_moab.vertex_map[i] = mbtool.find_or_create_vertex({x, y, z});
   }
   // copy the facet_data
   std::array<int, 3> conn;
@@ -164,10 +163,8 @@ void facet_all_volumes(const TopTools_HSequenceOfShape &shape_list,
       n_surfaces_without_facets++;
     } else {
       // make facets for current face
-      facet_data facets = make_surface_facets(face, data);
-      facet_vertex_map f_vertex_map;
-      mbtool.generate_facet_vertex_map(f_vertex_map, facets.coords);
-      mbtool.add_facets_to_surface(surface, facets.connectivity, f_vertex_map);
+      facet_data facets = make_surface_facets(mbtool, face, data);
+      mbtool.add_facets_to_surface(surface, facets.connectivity, facets.vertex_map);
 
       // add curves to surface
       TopTools_IndexedMapOfShape edges;
@@ -181,7 +178,7 @@ void facet_all_volumes(const TopTools_HSequenceOfShape &shape_list,
           edgeMap.Add(currentEdge, curve);
 
           edge_data edges = make_edge_facets(currentEdge, data);
-          mbtool.build_curve(curve, edges, f_vertex_map);
+          mbtool.build_curve(curve, edges, facets.vertex_map);
 
           // add vertices to edges
           TopTools_IndexedMapOfShape vertices;

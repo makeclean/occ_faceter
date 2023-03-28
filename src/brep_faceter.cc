@@ -47,6 +47,12 @@ struct TriangulationWithLocation {
   Handle(Poly_Triangulation) triangulation;
 };
 
+// convenient return for facets
+struct facet_data {
+  facet_coords coords;
+  facet_connectivity connectivity;
+};
+
 facet_data make_surface_facets(const TopoDS_Face &currentFace,
                                const TriangulationWithLocation &facetData) {
   facet_data facets_for_moab;

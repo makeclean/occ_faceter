@@ -25,12 +25,6 @@ typedef std::vector<std::array<double, 3>> facet_coords;
 typedef std::vector<std::array<int, 3>> facet_connectivity;
 typedef std::map<moab::EntityHandle, moab::EntityHandle> ent_ent_map;
 
-// convenient return for facets
-struct facet_data {
-  facet_coords coords;
-  facet_connectivity connectivity;
-};
-
 struct edge_data {
   std::vector<int> connectivity;
 };

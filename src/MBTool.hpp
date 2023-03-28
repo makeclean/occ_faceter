@@ -29,7 +29,7 @@ struct edge_data {
   std::vector<int> connectivity;
 };
 
-typedef std::map<int,moab::EntityHandle> facet_vertex_map;
+typedef std::vector<moab::EntityHandle> facet_verticies;
 
 class MBTool {
 public:
@@ -47,13 +47,16 @@ public:
   void write_geometry(const std::string &filename);
 
   moab::EntityHandle find_or_create_vertex(std::array<double,3> point);
+  moab::EntityHandle create_triangle(const std::array<moab::EntityHandle,3> &verticies);
+  void add_entities(moab::EntityHandle parent, const std::vector<moab::EntityHandle> &children);
+
   void add_node_to_meshset(moab::EntityHandle meshset,
                            std::array<double,3> coord);
   void add_facets_to_surface(moab::EntityHandle surface,
                              const facet_connectivity& connectivity_list,
-                             const facet_vertex_map& vertex_map);
+                             const facet_verticies& verticies);
   void build_curve(moab::EntityHandle curve, edge_data edge,
-                              const facet_vertex_map& vertex_map);
+                              const facet_verticies& verticies);
   void add_child_to_parent(moab::EntityHandle child,
                            moab::EntityHandle parent, int sense);
   void add_child_to_parent(moab::EntityHandle child,

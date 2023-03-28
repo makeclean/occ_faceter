@@ -50,7 +50,7 @@ struct TriangulationWithLocation {
 // convenient return for facets
 struct facet_data {
   facet_connectivity connectivity;
-  facet_vertex_map vertex_map;
+  facet_verticies verticies;
 };
 
 facet_data make_surface_facets(MBTool &mbtool,
@@ -66,17 +66,17 @@ facet_data make_surface_facets(MBTool &mbtool,
     Standard_Real x, y, z;
     triangles->Node(i).Coord(x, y, z);
     local_transform.Transforms(x, y, z);
-    facets_for_moab.vertex_map[i] = mbtool.find_or_create_vertex({x, y, z});
+    facets_for_moab.verticies.push_back(mbtool.find_or_create_vertex({x, y, z}));
   }
-  // copy the facet_data
-  std::array<int, 3> conn;
   //     std::cout << "Face has " << tris.Length() << " triangles" << std::endl;
   for (int i = 1; i <= triangles->NbTriangles(); i++) {
     // get the node indexes for this triangle
     const Poly_Triangle &tri = triangles->Triangle(i);
-    tri.Get(conn[0], conn[1], conn[2]);
 
-    facets_for_moab.connectivity.push_back(conn);
+    // copy the facet_data
+    int a, b, c;
+    tri.Get(a, b, c);
+    facets_for_moab.connectivity.push_back({a - 1, b - 1, c - 1});
   }
   return facets_for_moab;
 }
@@ -102,7 +102,7 @@ edge_data make_edge_facets(const TopoDS_Edge &currentEdge,
   std::vector<int> &conn = edges_for_moab.connectivity;
   const TColStd_Array1OfInteger &lines = edges->Nodes();
   for (int i = lines.Lower(); i <= lines.Upper(); i++) {
-    conn.push_back(lines(i));
+    conn.push_back(lines(i) - 1);
   }
   return edges_for_moab;
 }
@@ -164,7 +164,7 @@ void facet_all_volumes(const TopTools_HSequenceOfShape &shape_list,
     } else {
       // make facets for current face
       facet_data facets = make_surface_facets(mbtool, face, data);
-      mbtool.add_facets_to_surface(surface, facets.connectivity, facets.vertex_map);
+      mbtool.add_facets_to_surface(surface, facets.connectivity, facets.verticies);
 
       // add curves to surface
       TopTools_IndexedMapOfShape edges;
@@ -178,7 +178,7 @@ void facet_all_volumes(const TopTools_HSequenceOfShape &shape_list,
           edgeMap.Add(currentEdge, curve);
 
           edge_data edges = make_edge_facets(currentEdge, data);
-          mbtool.build_curve(curve, edges, facets.vertex_map);
+          mbtool.build_curve(curve, edges, facets.verticies);
 
           // add vertices to edges
           TopTools_IndexedMapOfShape vertices;

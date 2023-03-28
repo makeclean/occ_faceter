@@ -49,7 +49,8 @@ public:
   void write_geometry(const std::string &filename);
 
   moab::EntityHandle find_or_create_vertex(std::array<double,3> point);
-  moab::EntityHandle create_triangle(const std::array<moab::EntityHandle,3> &verticies);
+  moab::EntityHandle create_triangle(std::array<moab::EntityHandle,3> verticies);
+  moab::EntityHandle create_edge(std::array<moab::EntityHandle,2> verticies);
   void add_entities(moab::EntityHandle parent, const std::vector<moab::EntityHandle> &children);
 
   void note_degenerate_triangle() {
@@ -58,8 +59,6 @@ public:
 
   void add_node_to_meshset(moab::EntityHandle meshset,
                            std::array<double,3> coord);
-  void build_curve(moab::EntityHandle curve, edge_data edge,
-                              const facet_verticies& verticies);
   void add_child_to_parent(moab::EntityHandle child,
                            moab::EntityHandle parent, int sense);
   void add_child_to_parent(moab::EntityHandle child,

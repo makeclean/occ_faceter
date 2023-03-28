@@ -96,27 +96,50 @@ void make_surface_facets(MBTool &mbtool,
 }
 
 // make the edge facets
-edge_data make_edge_facets(const TopoDS_Edge &currentEdge,
-                           const Handle(Poly_Triangulation) &triangulation,
-                           const TopLoc_Location &location) {
-  edge_data edges_for_moab;
-
+void make_edge_facets(MBTool &mbtool,
+                      moab::EntityHandle curve,
+                      const TopoDS_Edge &currentEdge,
+                      const Handle(Poly_Triangulation) &triangulation,
+                      const TopLoc_Location &location,
+                      const facet_verticies &verticies) {
   // get the faceting for the edge
   Handle(Poly_PolygonOnTriangulation) edges =
       BRep_Tool::PolygonOnTriangulation(currentEdge, triangulation, location);
 
   if (edges.IsNull()) {
     std::cout << "Warning: Unexpected null edges." << std::endl;
-    return edges_for_moab;
+    return;
   }
 
-  // convert TColStd_Array1OfInteger to std::vector<int>
-  std::vector<int> &conn = edges_for_moab.connectivity;
-  const TColStd_Array1OfInteger &lines = edges->Nodes();
-  for (int i = lines.Lower(); i <= lines.Upper(); i++) {
-    conn.push_back(lines(i) - 1);
+  const auto &lines = edges->Nodes();
+  if (lines.Length() < 2) {
+    std::cerr << "Warning: Attempting to build empty curve.\n" << std::endl;
+    return;
   }
-  return edges_for_moab;
+
+  entity_vector edge_entities;
+  entity_vector vertex_entities;
+
+  moab::EntityHandle prev = verticies[lines(lines.Lower()) - 1];
+  vertex_entities.push_back(prev);
+
+  for (int i = lines.Lower() + 1; i <= lines.Upper(); i++) {
+    moab::EntityHandle vert = verticies[lines(i) - 1];
+    moab::EntityHandle edge = mbtool.create_edge({prev, vert});
+
+    vertex_entities.push_back(vert);
+    edge_entities.push_back(edge);
+    prev = vert;
+  }
+
+  // if curve is closed, remove duplicate vertex
+  if (vertex_entities.front() == vertex_entities.back()) {
+    vertex_entities.pop_back();
+  }
+
+  // add vertices and edges to curve
+  mbtool.add_entities(curve, vertex_entities);
+  mbtool.add_entities(curve, edge_entities);
 }
 
 // Use BRepMesh_IncrementalMesh to make the triangulation
@@ -192,8 +215,7 @@ void facet_all_volumes(const TopTools_HSequenceOfShape &shape_list,
         curve = mbtool.make_new_curve();
         edgeMap.Add(currentEdge, curve);
 
-        edge_data edges = make_edge_facets(currentEdge, triangulation, location);
-        mbtool.build_curve(curve, edges, verticies);
+        make_edge_facets(mbtool, curve, currentEdge, triangulation, location, verticies);
 
         // add vertices to edges
         TopTools_IndexedMapOfShape vertices;

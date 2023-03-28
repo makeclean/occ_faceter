@@ -221,9 +221,15 @@ moab::EntityHandle MBTool::find_or_create_vertex(std::array<double,3> coord) {
     return result;
 }
 
-moab::EntityHandle MBTool::create_triangle(const std::array<moab::EntityHandle,3> &verticies) {
+moab::EntityHandle MBTool::create_triangle(std::array<moab::EntityHandle,3> verticies) {
   moab::EntityHandle result;
   CHECK_MOAB_RVAL(mbi->create_element(moab::MBTRI,verticies.data(),3,result));
+  return result;
+}
+
+moab::EntityHandle MBTool::create_edge(const std::array<moab::EntityHandle,2> verticies) {
+  moab::EntityHandle result;
+  CHECK_MOAB_RVAL(mbi->create_element(moab::MBEDGE,verticies.data(),2,result));
   return result;
 }
 
@@ -236,45 +242,6 @@ void MBTool::add_node_to_meshset(moab::EntityHandle meshset,
 
   moab::EntityHandle node = find_or_create_vertex(coord);
   CHECK_MOAB_RVAL(mbi->add_entities(meshset, &node, 1));
-}
-
-// add curves to surface
-void MBTool::build_curve(moab::EntityHandle curve,
-  edge_data edge_collection_i, const facet_verticies& verticies) {
-  if (edge_collection_i.connectivity.empty()) {
-    std::cerr << "Warning: Attempting to build empty curve.\n" << std::endl;
-    // throw std::runtime_error("attempting to build empty curve");
-    return;
-  }
-
-  moab::Range edges;
-  moab::Range vertices;
-
-  moab::EntityHandle vertex = verticies.at(edge_collection_i.connectivity.at(0));
-  moab::EntityHandle connection[2];
-  connection[1] = vertex;
-  vertices.insert(vertex);
-
-  int size = edge_collection_i.connectivity.size();
-  for (int j = 1; j < size; j++ ) {
-    vertex = verticies.at(edge_collection_i.connectivity.at(j));
-    vertices.insert(vertex);
-
-    connection[0] = connection[1];
-    connection[1] = vertex;
-
-    moab::EntityHandle edge;
-    CHECK_MOAB_RVAL(mbi->create_element(moab::MBEDGE, connection, 2, edge));
-    edges.insert(edge);
-  }
-
-  // if curve is closed, remove duplicate vertex
-  if (vertices.front() == vertices.back())
-    vertices.pop_back();
-
-  // add vertices and edges to curve
-  CHECK_MOAB_RVAL(mbi->add_entities(curve,vertices));
-  CHECK_MOAB_RVAL(mbi->add_entities(curve,edges));
 }
 
 // write the geometry

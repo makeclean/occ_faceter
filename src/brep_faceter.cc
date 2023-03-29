@@ -42,69 +42,108 @@ typedef NCollection_IndexedDataMap<TopoDS_Face, moab::EntityHandle, TopTools_Sha
 typedef NCollection_IndexedDataMap<TopoDS_Edge, moab::EntityHandle, TopTools_ShapeMapHasher> MapEdgeToCurve;
 typedef NCollection_IndexedDataMap<TopoDS_Vertex, moab::EntityHandle, TopTools_ShapeMapHasher> MapVertexToMeshset;
 
-struct TriangulationWithLocation {
-  TopLoc_Location loc;
-  Handle(Poly_Triangulation) triangulation;
-};
-
 // convenient return for facets
 struct facet_data {
   facet_connectivity connectivity;
-  facet_vertex_map vertex_map;
+  facet_verticies verticies;
 };
 
-facet_data make_surface_facets(MBTool &mbtool,
-                               const TopoDS_Face &currentFace,
-                               const TriangulationWithLocation &facetData) {
-  facet_data facets_for_moab;
-
-  Handle(Poly_Triangulation) triangles = facetData.triangulation;
-  const gp_Trsf &local_transform = facetData.loc;
-
+entity_vector make_surface_verticies(MBTool &mbtool,
+                                     moab::EntityHandle surface,
+                                     const Poly_Triangulation &triangulation,
+                                     const TopLoc_Location &location) {
+  const gp_Trsf &local_transform = location;
+  facet_verticies verticies;
   // retrieve facet data
-  for (int i = 1; i <= triangles->NbNodes(); i++) {
+  for (int i = 1; i <= triangulation.NbNodes(); i++) {
     Standard_Real x, y, z;
-    triangles->Node(i).Coord(x, y, z);
+    triangulation.Node(i).Coord(x, y, z);
     local_transform.Transforms(x, y, z);
-    facets_for_moab.vertex_map[i] = mbtool.find_or_create_vertex({x, y, z});
+    verticies.push_back(mbtool.find_or_create_vertex({x, y, z}));
   }
-  // copy the facet_data
-  std::array<int, 3> conn;
-  //     std::cout << "Face has " << tris.Length() << " triangles" << std::endl;
-  for (int i = 1; i <= triangles->NbTriangles(); i++) {
-    // get the node indexes for this triangle
-    const Poly_Triangle &tri = triangles->Triangle(i);
-    tri.Get(conn[0], conn[1], conn[2]);
+  mbtool.add_entities(surface, verticies);
+  return verticies;
+}
 
-    facets_for_moab.connectivity.push_back(conn);
+void make_surface_facets(MBTool &mbtool,
+                        moab::EntityHandle surface,
+                        const Poly_Triangulation &triangulation,
+                        const facet_verticies &verticies) {
+  entity_vector triangles;
+
+  //     std::cout << "Face has " << tris.Length() << " triangles" << std::endl;
+  for (int i = 1; i <= triangulation.NbTriangles(); i++) {
+    // get the node indexes for this triangle
+    const Poly_Triangle &tri = triangulation.Triangle(i);
+
+    int a, b, c;
+    tri.Get(a, b, c);
+    // subtract one because OCC uses one based indexing
+    std::array<moab::EntityHandle,3> connections = {
+      verticies.at(a - 1),
+      verticies.at(b - 1),
+      verticies.at(c - 1),
+    };
+    if (connections[2] == connections[1] ||
+        connections[1] == connections[0] ||
+        connections[2] == connections[0] ) {
+      mbtool.note_degenerate_triangle();
+    } else {
+      triangles.push_back(mbtool.create_triangle(connections));
+    }
   }
-  return facets_for_moab;
+  mbtool.add_entities(surface, triangles);
 }
 
 // make the edge facets
-edge_data make_edge_facets(const TopoDS_Edge &currentEdge,
-                           const TriangulationWithLocation &facetData) {
-  edge_data edges_for_moab;
-
-  if (facetData.triangulation.IsNull())
-    return edges_for_moab;
-
+void make_edge_facets(MBTool &mbtool,
+                      moab::EntityHandle curve,
+                      const TopoDS_Edge &currentEdge,
+                      const Handle(Poly_Triangulation) &triangulation,
+                      const TopLoc_Location &location,
+                      const facet_verticies &verticies) {
   // get the faceting for the edge
   Handle(Poly_PolygonOnTriangulation) edges =
-      BRep_Tool::PolygonOnTriangulation(currentEdge, facetData.triangulation, facetData.loc);
+      BRep_Tool::PolygonOnTriangulation(currentEdge, triangulation, location);
 
   if (edges.IsNull()) {
-    std::cout << "Warning: Unexpected null edges." << std::endl;
-    return edges_for_moab;
+    std::cerr << "Warning: Unexpected null edges." << std::endl;
+    return;
   }
 
-  // convert TColStd_Array1OfInteger to std::vector<int>
-  std::vector<int> &conn = edges_for_moab.connectivity;
   const TColStd_Array1OfInteger &lines = edges->Nodes();
-  for (int i = lines.Lower(); i <= lines.Upper(); i++) {
-    conn.push_back(lines(i));
+  if (lines.Length() < 2) {
+    std::cerr << "Warning: Attempting to build empty curve." << std::endl;
+    return;
   }
-  return edges_for_moab;
+
+  entity_vector edge_entities;
+  entity_vector vertex_entities;
+
+  auto occ_edge_it = lines.cbegin();
+
+  // subtract one because OCC uses one based indexing
+  moab::EntityHandle prev = verticies.at(*occ_edge_it - 1);
+  vertex_entities.push_back(prev);
+  occ_edge_it++;
+
+  for (; occ_edge_it != lines.cend(); occ_edge_it++) {
+    moab::EntityHandle vert = verticies.at(*occ_edge_it - 1);
+    moab::EntityHandle edge = mbtool.create_edge({prev, vert});
+
+    vertex_entities.push_back(vert);
+    edge_entities.push_back(edge);
+    prev = vert;
+  }
+
+  // if curve is closed, remove duplicate vertex
+  if (vertex_entities.front() == vertex_entities.back()) {
+    vertex_entities.pop_back();
+  }
+
+  // add vertices and edges to curve
+  mbtool.add_entities(curve, vertex_entities);
+  mbtool.add_entities(curve, edge_entities);
 }
 
 // Use BRepMesh_IncrementalMesh to make the triangulation
@@ -156,54 +195,55 @@ void facet_all_volumes(const TopTools_HSequenceOfShape &shape_list,
     moab::EntityHandle surface = it.Value();
 
     // get the triangulation for the current face
-    TriangulationWithLocation data;
-    data.triangulation = BRep_Tool::Triangulation(face, data.loc);
+    TopLoc_Location location;
+    Handle(Poly_Triangulation) triangulation = BRep_Tool::Triangulation(face, location);
 
-    if (data.triangulation.IsNull() || data.triangulation->NbNodes() < 1) {
+    if (triangulation.IsNull() || triangulation->NbNodes() < 1) {
       n_surfaces_without_facets++;
-    } else {
-      // make facets for current face
-      facet_data facets = make_surface_facets(mbtool, face, data);
-      mbtool.add_facets_to_surface(surface, facets.connectivity, facets.vertex_map);
+      continue;
+    }
 
-      // add curves to surface
-      TopTools_IndexedMapOfShape edges;
-      TopExp::MapShapes(face, TopAbs_EDGE, edges);
-      for (int i = 1; i <= edges.Extent(); i++) {
-        const TopoDS_Edge &currentEdge = TopoDS::Edge(edges(i));
+    // make facets for current face
+    entity_vector verticies = make_surface_verticies(mbtool, surface, triangulation, location);
 
-        moab::EntityHandle curve;
-        if (!edgeMap.FindFromKey(currentEdge, curve)) {
-          curve = mbtool.make_new_curve();
-          edgeMap.Add(currentEdge, curve);
+    make_surface_facets(mbtool, surface, triangulation, verticies);
 
-          edge_data edges = make_edge_facets(currentEdge, data);
-          mbtool.build_curve(curve, edges, facets.vertex_map);
+    // add curves to surface
+    TopTools_IndexedMapOfShape edges;
+    TopExp::MapShapes(face, TopAbs_EDGE, edges);
+    for (int i = 1; i <= edges.Extent(); i++) {
+      const TopoDS_Edge &currentEdge = TopoDS::Edge(edges(i));
 
-          // add vertices to edges
-          TopTools_IndexedMapOfShape vertices;
-          TopExp::MapShapes(currentEdge, TopAbs_VERTEX, vertices);
-          for (int j = 1; j <= vertices.Extent(); j++) {
-            const TopoDS_Vertex &currentVertex = TopoDS::Vertex(vertices(j));
+      moab::EntityHandle curve;
+      if (!edgeMap.FindFromKey(currentEdge, curve)) {
+        curve = mbtool.make_new_curve();
+        edgeMap.Add(currentEdge, curve);
 
-            moab::EntityHandle meshset;
-            if (!vertexMap.FindFromKey(currentVertex, meshset)) {
-              // create meshset for the vertex, add it to the map, and add its node
-              meshset = mbtool.make_new_vertex();
-              vertexMap.Add(currentVertex, meshset);
+        make_edge_facets(mbtool, curve, currentEdge, triangulation, location, verticies);
 
-              gp_Pnt pnt = BRep_Tool::Pnt(currentVertex);
-              std::array<double, 3> coords;
-              coords[0] = pnt.X(); coords[1] = pnt.Y(); coords[2] = pnt.Z();
-              mbtool.add_node_to_meshset(meshset, coords);
-            }
+        // add vertices to edges
+        TopTools_IndexedMapOfShape vertices;
+        TopExp::MapShapes(currentEdge, TopAbs_VERTEX, vertices);
+        for (int j = 1; j <= vertices.Extent(); j++) {
+          const TopoDS_Vertex &currentVertex = TopoDS::Vertex(vertices(j));
 
-            mbtool.add_child_to_parent(meshset, curve);
+          moab::EntityHandle meshset;
+          if (!vertexMap.FindFromKey(currentVertex, meshset)) {
+            // create meshset for the vertex, add it to the map, and add its node
+            meshset = mbtool.make_new_vertex();
+            vertexMap.Add(currentVertex, meshset);
+
+            gp_Pnt pnt = BRep_Tool::Pnt(currentVertex);
+            std::array<double, 3> coords;
+            coords[0] = pnt.X(); coords[1] = pnt.Y(); coords[2] = pnt.Z();
+            mbtool.add_node_to_meshset(meshset, coords);
           }
+
+          mbtool.add_child_to_parent(meshset, curve);
         }
-        int sense = currentEdge.Orientation() != face.Orientation() ? moab::SENSE_REVERSE : moab::SENSE_FORWARD;
-        mbtool.add_child_to_parent(curve, surface, sense);
       }
+      int sense = currentEdge.Orientation() != face.Orientation() ? moab::SENSE_REVERSE : moab::SENSE_FORWARD;
+      mbtool.add_child_to_parent(curve, surface, sense);
     }
   }
 

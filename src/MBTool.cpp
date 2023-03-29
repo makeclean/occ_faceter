@@ -221,93 +221,27 @@ moab::EntityHandle MBTool::find_or_create_vertex(std::array<double,3> coord) {
     return result;
 }
 
+moab::EntityHandle MBTool::create_triangle(std::array<moab::EntityHandle,3> verticies) {
+  moab::EntityHandle result;
+  CHECK_MOAB_RVAL(mbi->create_element(moab::MBTRI,verticies.data(),3,result));
+  return result;
+}
+
+moab::EntityHandle MBTool::create_edge(const std::array<moab::EntityHandle,2> verticies) {
+  moab::EntityHandle result;
+  CHECK_MOAB_RVAL(mbi->create_element(moab::MBEDGE,verticies.data(),2,result));
+  return result;
+}
+
+void MBTool::add_entities(moab::EntityHandle parent, const entity_vector &children) {
+  CHECK_MOAB_RVAL(mbi->add_entities(parent, children.data(), children.size()));
+}
+
 void MBTool::add_node_to_meshset(moab::EntityHandle meshset,
   std::array<double,3> coord) {
 
   moab::EntityHandle node = find_or_create_vertex(coord);
   CHECK_MOAB_RVAL(mbi->add_entities(meshset, &node, 1));
-}
-
-// add facets to surface
-void MBTool::add_facets_to_surface(moab::EntityHandle surface,
-  const facet_connectivity& connectivity_list, const facet_vertex_map& vertex_map) {
-  moab::Range vertices;
-  for (auto const & pair : vertex_map) {
-    vertices.insert(pair.second);
-  }
-  CHECK_MOAB_RVAL(mbi->add_entities(surface, vertices));
-
-  moab::Range triangles;
-  for ( std::array<int,3> connectivity : connectivity_list) {
-    moab::EntityHandle tri;
-    moab::EntityHandle connections[3];
-    connections[0] = vertex_map.at(connectivity[0]);
-    connections[1] = vertex_map.at(connectivity[1]);
-    connections[2] = vertex_map.at(connectivity[2]);
-
-    if (connections[2] == connections[1] ||
-        connections[1] == connections[0] ||
-        connections[2] == connections[0] ) {
-      degenerate_triangle_count++;
-    } else {
-      CHECK_MOAB_RVAL(mbi->create_element(moab::MBTRI,connections,3,tri));
-      triangles.insert(tri);
-    }
-  }
-
-  CHECK_MOAB_RVAL(mbi->add_entities(surface,triangles));
-
-  /*
-  // tag the triangles with their volume id
-  int vol_value = volID;
-  const void *vol_ptr = &vol_value;
-  // tag the triangles with their surface id
-  int surf_value = surfID;
-  const void *surf_ptr = &surf_value;
-
-  for ( moab::EntityHandle triangle : triangles ) {
-    rval = mbi->tag_set_data(vol_id_tag, &triangle,1, vol_ptr);
-    rval = mbi->tag_set_data(surf_id_tag, &triangle,1, surf_ptr);
-  }
-  */
-}
-
-// add curves to surface
-void MBTool::build_curve(moab::EntityHandle curve,
-  edge_data edge_collection_i, const facet_vertex_map& vertex_map) {
-  if (edge_collection_i.connectivity.empty()) {
-    std::cout << "Warning: Attempting to build empty curve." << std::endl;
-    // throw std::runtime_error("attempting to build empty curve");
-  }
-
-  moab::Range edges;
-  moab::Range vertices;
-
-  moab::EntityHandle vertex = vertex_map.at(edge_collection_i.connectivity.at(0));
-  moab::EntityHandle connection[2];
-  connection[1] = vertex;
-  vertices.insert(vertex);
-
-  int size_minus_1 = edge_collection_i.connectivity.size() - 1;
-
-  for ( int j = 0 ; j < size_minus_1 ; j++ ) {
-    connection[0] = connection[1];
-    vertex = vertex_map.at(edge_collection_i.connectivity.at(j+1));
-    connection[1] = vertex;
-    vertices.insert(vertex);
-
-    moab::EntityHandle edge;
-    CHECK_MOAB_RVAL(mbi->create_element(moab::MBEDGE, connection, 2, edge));
-    edges.insert(edge);
-  }
-
-  // if curve is closed, remove duplicate vertex
-  if (vertices.front() == vertices.back())
-    vertices.pop_back();
-
-  // add vertices and edges to curve
-  CHECK_MOAB_RVAL(mbi->add_entities(curve,vertices));
-  CHECK_MOAB_RVAL(mbi->add_entities(curve,edges));
 }
 
 // write the geometry

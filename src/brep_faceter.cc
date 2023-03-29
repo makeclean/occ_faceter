@@ -111,7 +111,7 @@ void make_edge_facets(MBTool &mbtool,
     return;
   }
 
-  const auto &lines = edges->Nodes();
+  const TColStd_Array1OfInteger &lines = edges->Nodes();
   if (lines.Length() < 2) {
     std::cerr << "Warning: Attempting to build empty curve." << std::endl;
     return;
@@ -120,11 +120,15 @@ void make_edge_facets(MBTool &mbtool,
   entity_vector edge_entities;
   entity_vector vertex_entities;
 
-  moab::EntityHandle prev = verticies.at(lines(lines.Lower()) - 1);
-  vertex_entities.push_back(prev);
+  auto occ_edge_it = lines.cbegin();
 
-  for (int i = lines.Lower() + 1; i <= lines.Upper(); i++) {
-    moab::EntityHandle vert = verticies.at(lines(i) - 1);
+  // subtract one because OCC uses one based indexing
+  moab::EntityHandle prev = verticies.at(*occ_edge_it - 1);
+  vertex_entities.push_back(prev);
+  occ_edge_it++;
+
+  for (; occ_edge_it != lines.cend(); occ_edge_it++) {
+    moab::EntityHandle vert = verticies.at(*occ_edge_it - 1);
     moab::EntityHandle edge = mbtool.create_edge({prev, vert});
 
     vertex_entities.push_back(vert);

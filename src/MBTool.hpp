@@ -31,8 +31,6 @@ struct edge_data {
   std::vector<int> connectivity;
 };
 
-typedef std::vector<moab::EntityHandle> facet_verticies;
-
 class MBTool {
 public:
   MBTool();

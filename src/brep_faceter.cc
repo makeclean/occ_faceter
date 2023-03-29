@@ -45,7 +45,7 @@ typedef NCollection_IndexedDataMap<TopoDS_Vertex, moab::EntityHandle, TopTools_S
 // convenient return for facets
 struct facet_data {
   facet_connectivity connectivity;
-  facet_verticies verticies;
+  entity_vector verticies;
 };
 
 entity_vector make_surface_verticies(MBTool &mbtool,
@@ -53,7 +53,7 @@ entity_vector make_surface_verticies(MBTool &mbtool,
                                      const Poly_Triangulation &triangulation,
                                      const TopLoc_Location &location) {
   const gp_Trsf &local_transform = location;
-  facet_verticies verticies;
+  entity_vector verticies;
   // retrieve facet data
   for (int i = 1; i <= triangulation.NbNodes(); i++) {
     Standard_Real x, y, z;
@@ -68,7 +68,7 @@ entity_vector make_surface_verticies(MBTool &mbtool,
 void make_surface_facets(MBTool &mbtool,
                         moab::EntityHandle surface,
                         const Poly_Triangulation &triangulation,
-                        const facet_verticies &verticies) {
+                        const entity_vector &verticies) {
   entity_vector triangles;
 
   //     std::cout << "Face has " << tris.Length() << " triangles" << std::endl;
@@ -101,7 +101,7 @@ void make_edge_facets(MBTool &mbtool,
                       const TopoDS_Edge &currentEdge,
                       const Handle(Poly_Triangulation) &triangulation,
                       const TopLoc_Location &location,
-                      const facet_verticies &verticies) {
+                      const entity_vector &verticies) {
   // get the faceting for the edge
   Handle(Poly_PolygonOnTriangulation) edges =
       BRep_Tool::PolygonOnTriangulation(currentEdge, triangulation, location);

@@ -27,10 +27,6 @@ typedef std::vector<std::array<double, 3>> facet_coords;
 typedef std::vector<std::array<int, 3>> facet_connectivity;
 typedef std::map<moab::EntityHandle, moab::EntityHandle> ent_ent_map;
 
-struct edge_data {
-  std::vector<int> connectivity;
-};
-
 class MBTool {
 public:
   MBTool();

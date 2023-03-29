@@ -45,7 +45,7 @@ public:
   moab::EntityHandle find_or_create_vertex(std::array<double,3> point);
   moab::EntityHandle create_triangle(std::array<moab::EntityHandle,3> verticies);
   moab::EntityHandle create_edge(std::array<moab::EntityHandle,2> verticies);
-  void add_entities(moab::EntityHandle parent, const std::vector<moab::EntityHandle> &children);
+  void add_entities(moab::EntityHandle parent, const entity_vector &children);
 
   void note_degenerate_triangle() {
     degenerate_triangle_count += 1;
@@ -57,11 +57,10 @@ public:
                            moab::EntityHandle parent, int sense);
   void add_child_to_parent(moab::EntityHandle child,
                            moab::EntityHandle parent);
-  void add_group(const std::string &name,
-                 const std::vector<moab::EntityHandle> &entities);
+  void add_group(const std::string &name, const entity_vector &entities);
   void add_mat_ids();
 
-  std::vector<moab::EntityHandle> get_entities_by_dimension(
+  entity_vector get_entities_by_dimension(
       const moab::EntityHandle meshset, const int dimension,
       const bool recursive) const;
   size_t get_number_of_meshsets();

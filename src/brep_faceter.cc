@@ -253,7 +253,7 @@ void facet_all_volumes(const TopTools_HSequenceOfShape &shape_list,
   }
 
   // build a list of volumes for each material
-  std::map<std::string, std::vector<moab::EntityHandle>> material_volumes;
+  std::map<std::string, entity_vector> material_volumes;
 
   // if given a list of materials, then reverse the order before using pop_back()
   std::vector<std::string> mats_reversed(mat_list);
@@ -286,22 +286,20 @@ void facet_all_volumes(const TopTools_HSequenceOfShape &shape_list,
 
   if (special_case) {
     // temporary hack to get the test to pass (with early return)
-    std::vector<moab::EntityHandle> empty_list;
-    mbtool.add_group("dummy_mat", empty_list);
+    mbtool.add_group("dummy_mat", {});
     return;
   }
 
   // create material groups
   for (auto &pair : material_volumes) {
     std::string material = pair.first;
-    std::vector<moab::EntityHandle> &volumes = pair.second;
 
     // add "mat:"" prefix, unless it's already there
     if (!material.empty() && material.rfind("mat:", 0) != 0) {
       material = "mat:" + material;
     }
 
-    mbtool.add_group(material, volumes);
+    mbtool.add_group(material, pair.second);
   }
 }
 

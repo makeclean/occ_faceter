@@ -29,6 +29,6 @@ struct std::hash<xyz_coords>
     }
 };
 
-typedef std::unordered_map<xyz_coords, moab::EntityHandle> xyz_to_entity_map;
+typedef std::unordered_map<xyz_coords, moab::EntityHandle> coordinates_to_entity_map;
 
 #endif // XYZ_TO_ENTITY_MAP_HH

@@ -77,7 +77,7 @@ private:
   moab::EntityHandle create_entity_set(int dim);
 
   moab::Core *mbi;
-  xyz_to_entity_map verticies;
+  coordinates_to_entity_map verticies;
 
   moab::GeomTopoTool *geom_tool;
   int entity_id[5]; // group, volume, surface, curve IDs (indexed by dim)

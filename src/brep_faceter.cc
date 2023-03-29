@@ -80,9 +80,9 @@ void make_surface_facets(MBTool &mbtool,
     tri.Get(a, b, c);
     // subtract one because OCC uses one based indexing
     std::array<moab::EntityHandle,3> connections = {
-      verticies[a - 1],
-      verticies[b - 1],
-      verticies[c - 1],
+      verticies.at(a - 1),
+      verticies.at(b - 1),
+      verticies.at(c - 1),
     };
     if (connections[2] == connections[1] ||
         connections[1] == connections[0] ||
@@ -107,24 +107,24 @@ void make_edge_facets(MBTool &mbtool,
       BRep_Tool::PolygonOnTriangulation(currentEdge, triangulation, location);
 
   if (edges.IsNull()) {
-    std::cout << "Warning: Unexpected null edges." << std::endl;
+    std::cerr << "Warning: Unexpected null edges." << std::endl;
     return;
   }
 
   const auto &lines = edges->Nodes();
   if (lines.Length() < 2) {
-    std::cerr << "Warning: Attempting to build empty curve.\n" << std::endl;
+    std::cerr << "Warning: Attempting to build empty curve." << std::endl;
     return;
   }
 
   entity_vector edge_entities;
   entity_vector vertex_entities;
 
-  moab::EntityHandle prev = verticies[lines(lines.Lower()) - 1];
+  moab::EntityHandle prev = verticies.at(lines(lines.Lower()) - 1);
   vertex_entities.push_back(prev);
 
   for (int i = lines.Lower() + 1; i <= lines.Upper(); i++) {
-    moab::EntityHandle vert = verticies[lines(i) - 1];
+    moab::EntityHandle vert = verticies.at(lines(i) - 1);
     moab::EntityHandle edge = mbtool.create_edge({prev, vert});
 
     vertex_entities.push_back(vert);

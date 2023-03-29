@@ -84,9 +84,9 @@ void make_surface_facets(MBTool &mbtool,
       verticies[b - 1],
       verticies[c - 1],
     };
-    if (verticies[2] == verticies[1] ||
-        verticies[1] == verticies[0] ||
-        verticies[2] == verticies[0] ) {
+    if (connections[2] == connections[1] ||
+        connections[1] == connections[0] ||
+        connections[2] == connections[0] ) {
       mbtool.note_degenerate_triangle();
     } else {
       triangles.push_back(mbtool.create_triangle(connections));

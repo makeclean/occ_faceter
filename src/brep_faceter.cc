@@ -211,14 +211,18 @@ void facet_all_volumes(const TopTools_HSequenceOfShape &shape_list,
 
           moab::EntityHandle meshset;
           if (!vertexMap.FindFromKey(currentVertex, meshset)) {
-            // create meshset for the vertex, add it to the map, and add its node
-            meshset = mbtool.make_new_vertex();
-            vertexMap.Add(currentVertex, meshset);
+            // No location transform applied here, is that correct?!
+            double x, y, z;
+            BRep_Tool::Pnt(currentVertex).Coord().Coord(x, y, z);
+            std::array<moab::EntityHandle, 1> node = {
+              mbtool.find_or_create_vertex({x, y, z}),
+            };
 
-            gp_Pnt pnt = BRep_Tool::Pnt(currentVertex);
-            std::array<double, 3> coords;
-            coords[0] = pnt.X(); coords[1] = pnt.Y(); coords[2] = pnt.Z();
-            mbtool.add_node_to_meshset(meshset, coords);
+            // create meshset for the vertex, add its node, then add it to the map
+            meshset = mbtool.make_new_vertex();
+            mbtool.add_entities(meshset, node.begin(), node.end());
+
+            vertexMap.Add(currentVertex, meshset);
           }
 
           mbtool.add_child_to_parent(meshset, curve);

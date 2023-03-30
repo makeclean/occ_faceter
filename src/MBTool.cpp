@@ -236,11 +236,8 @@ void MBTool::add_entities(moab::EntityHandle parent, const entity_vector &childr
   CHECK_MOAB_RVAL(mbi->add_entities(parent, children.data(), children.size()));
 }
 
-void MBTool::add_node_to_meshset(moab::EntityHandle meshset,
-  std::array<double,3> coord) {
-
-  moab::EntityHandle node = find_or_create_vertex(coord);
-  CHECK_MOAB_RVAL(mbi->add_entities(meshset, &node, 1));
+void MBTool::add_entities(moab::EntityHandle parent, const moab::EntityHandle *begin, const moab::EntityHandle *end) {
+  CHECK_MOAB_RVAL(mbi->add_entities(parent, begin, end - begin));
 }
 
 // write the geometry

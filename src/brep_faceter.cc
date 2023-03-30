@@ -158,7 +158,6 @@ void facet_all_volumes(const TopTools_HSequenceOfShape &shape_list,
                        std::vector<std::string> &mat_list) {
   int count = shape_list.Length();
 
-  std::vector<TopoDS_Face> uniqueFaces;
   MapFaceToSurface surfaceMap;
   MapEdgeToCurve edgeMap;
   MapVertexToMeshset vertexMap;
@@ -174,17 +173,15 @@ void facet_all_volumes(const TopTools_HSequenceOfShape &shape_list,
       if (surfaceMap.Contains(face))
         continue;
 
-      uniqueFaces.push_back(face);
-      moab::EntityHandle surface = mbtool.make_new_surface();
-      surfaceMap.Add(face, surface);
+      surfaceMap.Add(face, mbtool.make_new_surface());
     }
   }
 
   // do the hard work
   // (a range based for loop doesn't seem to work with OpenMP)
 #pragma omp parallel for
-  for (int i = 0; i < uniqueFaces.size(); i++) {
-    perform_faceting(uniqueFaces[i], facet_tol);
+  for (int i = 1; i <= surfaceMap.Extent(); i++) {
+    perform_faceting(surfaceMap.FindKey(i), facet_tol);
   }
 
   // add facets (and edges) to surfaces

@@ -41,12 +41,6 @@ typedef NCollection_IndexedDataMap<TopoDS_Face, moab::EntityHandle, TopTools_Sha
 typedef NCollection_IndexedDataMap<TopoDS_Edge, moab::EntityHandle, TopTools_ShapeMapHasher> MapEdgeToCurve;
 typedef NCollection_IndexedDataMap<TopoDS_Vertex, moab::EntityHandle, TopTools_ShapeMapHasher> MapVertexToMeshset;
 
-// convenient return for facets
-struct facet_data {
-  facet_connectivity connectivity;
-  entity_vector verticies;
-};
-
 entity_vector make_surface_verticies(MBTool &mbtool,
                                      moab::EntityHandle surface,
                                      const Poly_Triangulation &triangulation,

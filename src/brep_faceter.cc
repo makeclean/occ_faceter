@@ -139,12 +139,6 @@ void make_edge_facets(MBTool &mbtool,
   mbtool.add_entities(curve, edge_entities);
 }
 
-// Use BRepMesh_IncrementalMesh to make the triangulation
-void perform_faceting(const TopoDS_Face &face, const FacetingTolerance& facet_tol) {
-  // This constructor calls Perform()
-  BRepMesh_IncrementalMesh facets(face, facet_tol.tolerance, facet_tol.is_relative, 0.5);
-}
-
 void facet_all_volumes(const TopTools_HSequenceOfShape &shape_list,
                        const FacetingTolerance& facet_tol,
                        MBTool &mbtool,
@@ -168,11 +162,16 @@ void facet_all_volumes(const TopTools_HSequenceOfShape &shape_list,
     }
   }
 
-  // do the hard work
-  // (a range based for loop doesn't seem to work with OpenMP)
+  // Do the hard work in parallel.  There's an old comment about OpenMP having
+  // restrictions that prevent this from working with a range based loop, would
+  // be interesting to know where this came from because they work for me with
+  // Clang 15.  That said, this doesn't help now because iterating over surfaceMap
+  // gives items rather then keys.
 #pragma omp parallel for
   for (int i = 1; i <= surfaceMap.Extent(); i++) {
-    perform_faceting(surfaceMap.FindKey(i), facet_tol);
+    // This constructor calls Perform() to mutate the face adding triangulation
+    // that can be used by the following serial code
+    BRepMesh_IncrementalMesh(surfaceMap.FindKey(i), facet_tol.tolerance, facet_tol.is_relative, 0.5);
   }
 
   // add facets (and edges) to surfaces

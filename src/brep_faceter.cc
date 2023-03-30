@@ -241,9 +241,8 @@ void facet_all_volumes(const TopTools_HSequenceOfShape &shape_list,
   // build a list of volumes for each material
   std::map<std::string, entity_vector> material_volumes;
 
-  // if given a list of materials, then reverse the order before using pop_back()
-  std::vector<std::string> mats_reversed(mat_list);
-  std::reverse(mats_reversed.begin(), mats_reversed.end());
+  // keep track of where we are in the material list
+  auto next_material = mat_list.begin();
 
   // create volumes and add surfaces
   for (const TopoDS_Shape &shape : shape_list) {
@@ -261,9 +260,8 @@ void facet_all_volumes(const TopTools_HSequenceOfShape &shape_list,
     // if single_material is set, then ignore materials list
     if (!single_material.empty()) {
       material_volumes[single_material].push_back(vol);
-    } else if (!mats_reversed.empty()) {
-      std::string material = mats_reversed.back();
-      mats_reversed.pop_back();
+    } else if (next_material != mat_list.end()) {
+      const auto &material = *(next_material++);
       material_volumes[material].push_back(vol);
     }
   }

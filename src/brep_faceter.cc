@@ -156,8 +156,6 @@ void facet_all_volumes(const TopTools_HSequenceOfShape &shape_list,
                        MBTool &mbtool,
                        std::string single_material, bool special_case,
                        std::vector<std::string> &mat_list) {
-  int count = shape_list.Length();
-
   MapFaceToSurface surfaceMap;
   MapEdgeToCurve edgeMap;
   MapVertexToMeshset vertexMap;
@@ -166,8 +164,7 @@ void facet_all_volumes(const TopTools_HSequenceOfShape &shape_list,
 
   // Important note: For the maps, edge/face equivalence is defined
   // by TopoDS_Shape::IsSame(), which ignores the orientation.
-  for (int i = 1; i <= count; i++) {
-    const TopoDS_Shape &shape = shape_list.Value(i);
+  for (const TopoDS_Shape &shape : shape_list) {
     for (TopExp_Explorer ex(shape, TopAbs_FACE); ex.More(); ex.Next()) {
       const TopoDS_Face &face = TopoDS::Face(ex.Current());
       if (surfaceMap.Contains(face))
@@ -252,9 +249,7 @@ void facet_all_volumes(const TopTools_HSequenceOfShape &shape_list,
   std::reverse(mats_reversed.begin(), mats_reversed.end());
 
   // create volumes and add surfaces
-  for (int i = 1; i <= count; i++) {
-    const TopoDS_Shape &shape = shape_list.Value(i);
-
+  for (const TopoDS_Shape &shape : shape_list) {
     moab::EntityHandle vol = mbtool.make_new_volume();
 
     for (TopExp_Explorer ex(shape, TopAbs_FACE); ex.More(); ex.Next()) {

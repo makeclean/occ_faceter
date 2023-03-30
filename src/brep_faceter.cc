@@ -290,30 +290,19 @@ void facet_all_volumes(const TopTools_HSequenceOfShape &shape_list,
   }
 }
 
-void sew_shapes(const TopoDS_Shape &shape, TopTools_HSequenceOfShape &sewed_shapes) {
-  if (shape.ShapeType() == TopAbs_COMPOUND) {
-    // decend and get children
-    for (TopoDS_Iterator it = TopoDS_Iterator(shape); it.More(); it.Next()) {
-      sew_shapes(it.Value(), sewed_shapes);
-    }
-  } else if (shape.ShapeType() == TopAbs_SOLID) {
-    // sew together all the curves
-    BRepOffsetAPI_Sewing sew;
-    sew.Add(shape);
-    sew.Perform();
-
-    // insert into the list
-    sewed_shapes.Append(sew.SewedShape());
-  } else {
-    std::cout << "Unknown shape type " << shape.ShapeType() << std::endl;
-  }
-}
-
 void sew_and_facet2(TopoDS_Shape &shape, const FacetingTolerance& facet_tol, MBTool &mbtool,
                     std::vector<std::string> &mat_list, std::string single_material,
                     bool special_case) {
   TopTools_HSequenceOfShape shape_list;
-  sew_shapes(shape, shape_list);
+  for (TopExp_Explorer solids(shape, TopAbs_SOLID); solids.More(); solids.Next()) {
+    // sew together all the curves
+    BRepOffsetAPI_Sewing sew;
+    sew.Add(solids.Current());
+    sew.Perform();
+
+    // insert into the list
+    shape_list.Append(sew.SewedShape());
+  }
   std::cout << "Instanciated " << shape_list.Length() << " items from file" << std::endl;
 
   if (mat_list.size() < shape_list.Length()) {

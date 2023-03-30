@@ -24,7 +24,6 @@
 #include "TopoDS_Edge.hxx"
 
 #include "TopTools_HSequenceOfShape.hxx"
-#include "TopTools_IndexedMapOfShape.hxx"
 #include "TopExp_Explorer.hxx"
 #include "TopExp.hxx"
 
@@ -209,10 +208,8 @@ void facet_all_volumes(const TopTools_HSequenceOfShape &shape_list,
     make_surface_facets(mbtool, surface, triangulation, verticies);
 
     // add curves to surface
-    TopTools_IndexedMapOfShape edges;
-    TopExp::MapShapes(face, TopAbs_EDGE, edges);
-    for (int i = 1; i <= edges.Extent(); i++) {
-      const TopoDS_Edge &currentEdge = TopoDS::Edge(edges(i));
+    for (TopExp_Explorer edges(face, TopAbs_EDGE); edges.More(); edges.Next()) {
+      const TopoDS_Edge &currentEdge = TopoDS::Edge(edges.Current());
 
       moab::EntityHandle curve;
       if (!edgeMap.FindFromKey(currentEdge, curve)) {
@@ -222,10 +219,8 @@ void facet_all_volumes(const TopTools_HSequenceOfShape &shape_list,
         make_edge_facets(mbtool, curve, currentEdge, triangulation, location, verticies);
 
         // add vertices to edges
-        TopTools_IndexedMapOfShape vertices;
-        TopExp::MapShapes(currentEdge, TopAbs_VERTEX, vertices);
-        for (int j = 1; j <= vertices.Extent(); j++) {
-          const TopoDS_Vertex &currentVertex = TopoDS::Vertex(vertices(j));
+        for (TopExp_Explorer vertices(currentEdge, TopAbs_VERTEX); vertices.More(); vertices.Next()) {
+          const TopoDS_Vertex &currentVertex = TopoDS::Vertex(vertices.Current());
 
           moab::EntityHandle meshset;
           if (!vertexMap.FindFromKey(currentVertex, meshset)) {

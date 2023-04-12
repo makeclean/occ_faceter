@@ -207,7 +207,6 @@ void facet_all_volumes(const TopTools_HSequenceOfShape &shape_list,
 
           moab::EntityHandle meshset;
           if (!vertexMap.FindFromKey(currentVertex, meshset)) {
-            // No location transform applied here, is that correct?!
             double x, y, z;
             BRep_Tool::Pnt(currentVertex).Coord().Coord(x, y, z);
             std::array<moab::EntityHandle, 1> node = {

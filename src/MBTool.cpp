@@ -236,8 +236,8 @@ void MBTool::add_entities(moab::EntityHandle parent, const entity_vector &childr
   CHECK_MOAB_RVAL(mbi->add_entities(parent, children.data(), children.size()));
 }
 
-void MBTool::add_entities(moab::EntityHandle parent, const moab::EntityHandle *begin, const moab::EntityHandle *end) {
-  CHECK_MOAB_RVAL(mbi->add_entities(parent, begin, end - begin));
+void MBTool::add_entity(moab::EntityHandle parent, moab::EntityHandle child) {
+  CHECK_MOAB_RVAL(mbi->add_entities(parent, &child, 1));
 }
 
 // write the geometry

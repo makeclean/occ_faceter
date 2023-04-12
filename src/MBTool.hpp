@@ -46,7 +46,7 @@ public:
   moab::EntityHandle create_triangle(std::array<moab::EntityHandle,3> verticies);
   moab::EntityHandle create_edge(std::array<moab::EntityHandle,2> verticies);
   void add_entities(moab::EntityHandle parent, const entity_vector &children);
-  void add_entities(moab::EntityHandle parent, const moab::EntityHandle *begin, const moab::EntityHandle *end);
+  void add_entity(moab::EntityHandle parent, moab::EntityHandle child);
 
   void note_degenerate_triangle() {
     degenerate_triangle_count += 1;

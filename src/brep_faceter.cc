@@ -209,13 +209,11 @@ void facet_all_volumes(const TopTools_HSequenceOfShape &shape_list,
           if (!vertexMap.FindFromKey(currentVertex, meshset)) {
             double x, y, z;
             BRep_Tool::Pnt(currentVertex).Coord().Coord(x, y, z);
-            std::array<moab::EntityHandle, 1> node = {
-              mbtool.find_or_create_vertex({x, y, z}),
-            };
+            moab::EntityHandle node = mbtool.find_or_create_vertex({x, y, z});
 
             // create meshset for the vertex, add its node, then add it to the map
             meshset = mbtool.make_new_vertex();
-            mbtool.add_entities(meshset, node.begin(), node.end());
+            mbtool.add_entity(meshset, node);
 
             vertexMap.Add(currentVertex, meshset);
           }

@@ -254,7 +254,7 @@ void facet_all_volumes(const TopTools_HSequenceOfShape &shape_list,
     if (!single_material.empty()) {
       material_volumes[single_material].push_back(vol);
     } else if (next_material != mat_list.end()) {
-      const auto &material = *(next_material++);
+      const std::string &material = *(next_material++);
       material_volumes[material].push_back(vol);
     }
   }

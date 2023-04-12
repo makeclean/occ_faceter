@@ -141,8 +141,7 @@ moab::EntityHandle MBTool::make_new_vertex() {
 }
 
 // add a new group (for materials)
-void MBTool::add_group(const std::string &name,
-                       const std::vector<moab::EntityHandle> &entities) {
+void MBTool::add_group(const std::string &name, const entity_vector &entities) {
   moab::EntityHandle group = create_entity_set(4);
 
   char namebuf[NAME_TAG_SIZE];
@@ -237,11 +236,8 @@ void MBTool::add_entities(moab::EntityHandle parent, const entity_vector &childr
   CHECK_MOAB_RVAL(mbi->add_entities(parent, children.data(), children.size()));
 }
 
-void MBTool::add_node_to_meshset(moab::EntityHandle meshset,
-  std::array<double,3> coord) {
-
-  moab::EntityHandle node = find_or_create_vertex(coord);
-  CHECK_MOAB_RVAL(mbi->add_entities(meshset, &node, 1));
+void MBTool::add_entity(moab::EntityHandle parent, moab::EntityHandle child) {
+  CHECK_MOAB_RVAL(mbi->add_entities(parent, &child, 1));
 }
 
 // write the geometry
@@ -254,10 +250,10 @@ void MBTool::write_geometry(const std::string &filename) {
   }
 }
 
-std::vector<moab::EntityHandle> MBTool::get_entities_by_dimension(
+entity_vector MBTool::get_entities_by_dimension(
   const moab::EntityHandle meshset, const int dimension,
   const bool recursive) const {
-  std::vector<moab::EntityHandle> entities;
+  entity_vector entities;
   CHECK_MOAB_RVAL(mbi->get_entities_by_dimension(meshset, dimension, entities, recursive));
   return entities;
 }

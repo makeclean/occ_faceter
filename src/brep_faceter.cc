@@ -24,7 +24,6 @@
 #include "TopoDS_Edge.hxx"
 
 #include "TopTools_HSequenceOfShape.hxx"
-#include "TopTools_IndexedMapOfShape.hxx"
 #include "TopExp_Explorer.hxx"
 #include "TopExp.hxx"
 
@@ -42,18 +41,12 @@ typedef NCollection_IndexedDataMap<TopoDS_Face, moab::EntityHandle, TopTools_Sha
 typedef NCollection_IndexedDataMap<TopoDS_Edge, moab::EntityHandle, TopTools_ShapeMapHasher> MapEdgeToCurve;
 typedef NCollection_IndexedDataMap<TopoDS_Vertex, moab::EntityHandle, TopTools_ShapeMapHasher> MapVertexToMeshset;
 
-// convenient return for facets
-struct facet_data {
-  facet_connectivity connectivity;
-  facet_verticies verticies;
-};
-
 entity_vector make_surface_verticies(MBTool &mbtool,
                                      moab::EntityHandle surface,
                                      const Poly_Triangulation &triangulation,
                                      const TopLoc_Location &location) {
   const gp_Trsf &local_transform = location;
-  facet_verticies verticies;
+  entity_vector verticies;
   // retrieve facet data
   for (int i = 1; i <= triangulation.NbNodes(); i++) {
     Standard_Real x, y, z;
@@ -68,7 +61,7 @@ entity_vector make_surface_verticies(MBTool &mbtool,
 void make_surface_facets(MBTool &mbtool,
                         moab::EntityHandle surface,
                         const Poly_Triangulation &triangulation,
-                        const facet_verticies &verticies) {
+                        const entity_vector &verticies) {
   entity_vector triangles;
 
   //     std::cout << "Face has " << tris.Length() << " triangles" << std::endl;
@@ -101,7 +94,7 @@ void make_edge_facets(MBTool &mbtool,
                       const TopoDS_Edge &currentEdge,
                       const Handle(Poly_Triangulation) &triangulation,
                       const TopLoc_Location &location,
-                      const facet_verticies &verticies) {
+                      const entity_vector &verticies) {
   // get the faceting for the edge
   Handle(Poly_PolygonOnTriangulation) edges =
       BRep_Tool::PolygonOnTriangulation(currentEdge, triangulation, location);
@@ -146,20 +139,11 @@ void make_edge_facets(MBTool &mbtool,
   mbtool.add_entities(curve, edge_entities);
 }
 
-// Use BRepMesh_IncrementalMesh to make the triangulation
-void perform_faceting(const TopoDS_Face &face, const FacetingTolerance& facet_tol) {
-  // This constructor calls Perform()
-  BRepMesh_IncrementalMesh facets(face, facet_tol.tolerance, facet_tol.is_relative, 0.5);
-}
-
 void facet_all_volumes(const TopTools_HSequenceOfShape &shape_list,
                        const FacetingTolerance& facet_tol,
                        MBTool &mbtool,
                        std::string single_material, bool special_case,
                        std::vector<std::string> &mat_list) {
-  int count = shape_list.Length();
-
-  std::vector<TopoDS_Face> uniqueFaces;
   MapFaceToSurface surfaceMap;
   MapEdgeToCurve edgeMap;
   MapVertexToMeshset vertexMap;
@@ -168,24 +152,22 @@ void facet_all_volumes(const TopTools_HSequenceOfShape &shape_list,
 
   // Important note: For the maps, edge/face equivalence is defined
   // by TopoDS_Shape::IsSame(), which ignores the orientation.
-  for (int i = 1; i <= count; i++) {
-    const TopoDS_Shape &shape = shape_list.Value(i);
+  for (const TopoDS_Shape &shape : shape_list) {
     for (TopExp_Explorer ex(shape, TopAbs_FACE); ex.More(); ex.Next()) {
       const TopoDS_Face &face = TopoDS::Face(ex.Current());
       if (surfaceMap.Contains(face))
         continue;
 
-      uniqueFaces.push_back(face);
-      moab::EntityHandle surface = mbtool.make_new_surface();
-      surfaceMap.Add(face, surface);
+      surfaceMap.Add(face, mbtool.make_new_surface());
     }
   }
 
-  // do the hard work
-  // (a range based for loop doesn't seem to work with OpenMP)
 #pragma omp parallel for
-  for (int i = 0; i < uniqueFaces.size(); i++) {
-    perform_faceting(uniqueFaces[i], facet_tol);
+  for (int i = 1; i <= surfaceMap.Extent(); i++) {
+    /*=====  Perform Faceting  =====*/
+    // This constructor calls Perform() to mutate the face adding triangulation
+    // that can be used by the following serial code
+    BRepMesh_IncrementalMesh(surfaceMap.FindKey(i), facet_tol.tolerance, facet_tol.is_relative, 0.5);
   }
 
   // add facets (and edges) to surfaces
@@ -209,10 +191,8 @@ void facet_all_volumes(const TopTools_HSequenceOfShape &shape_list,
     make_surface_facets(mbtool, surface, triangulation, verticies);
 
     // add curves to surface
-    TopTools_IndexedMapOfShape edges;
-    TopExp::MapShapes(face, TopAbs_EDGE, edges);
-    for (int i = 1; i <= edges.Extent(); i++) {
-      const TopoDS_Edge &currentEdge = TopoDS::Edge(edges(i));
+    for (TopExp_Explorer edges(face, TopAbs_EDGE); edges.More(); edges.Next()) {
+      const TopoDS_Edge &currentEdge = TopoDS::Edge(edges.Current());
 
       moab::EntityHandle curve;
       if (!edgeMap.FindFromKey(currentEdge, curve)) {
@@ -222,21 +202,20 @@ void facet_all_volumes(const TopTools_HSequenceOfShape &shape_list,
         make_edge_facets(mbtool, curve, currentEdge, triangulation, location, verticies);
 
         // add vertices to edges
-        TopTools_IndexedMapOfShape vertices;
-        TopExp::MapShapes(currentEdge, TopAbs_VERTEX, vertices);
-        for (int j = 1; j <= vertices.Extent(); j++) {
-          const TopoDS_Vertex &currentVertex = TopoDS::Vertex(vertices(j));
+        for (TopExp_Explorer vertices(currentEdge, TopAbs_VERTEX); vertices.More(); vertices.Next()) {
+          const TopoDS_Vertex &currentVertex = TopoDS::Vertex(vertices.Current());
 
           moab::EntityHandle meshset;
           if (!vertexMap.FindFromKey(currentVertex, meshset)) {
-            // create meshset for the vertex, add it to the map, and add its node
-            meshset = mbtool.make_new_vertex();
-            vertexMap.Add(currentVertex, meshset);
+            double x, y, z;
+            BRep_Tool::Pnt(currentVertex).Coord().Coord(x, y, z);
+            moab::EntityHandle node = mbtool.find_or_create_vertex({x, y, z});
 
-            gp_Pnt pnt = BRep_Tool::Pnt(currentVertex);
-            std::array<double, 3> coords;
-            coords[0] = pnt.X(); coords[1] = pnt.Y(); coords[2] = pnt.Z();
-            mbtool.add_node_to_meshset(meshset, coords);
+            // create meshset for the vertex, add its node, then add it to the map
+            meshset = mbtool.make_new_vertex();
+            mbtool.add_entity(meshset, node);
+
+            vertexMap.Add(currentVertex, meshset);
           }
 
           mbtool.add_child_to_parent(meshset, curve);
@@ -253,16 +232,13 @@ void facet_all_volumes(const TopTools_HSequenceOfShape &shape_list,
   }
 
   // build a list of volumes for each material
-  std::map<std::string, std::vector<moab::EntityHandle>> material_volumes;
+  std::map<std::string, entity_vector> material_volumes;
 
-  // if given a list of materials, then reverse the order before using pop_back()
-  std::vector<std::string> mats_reversed(mat_list);
-  std::reverse(mats_reversed.begin(), mats_reversed.end());
+  // keep track of where we are in the material list
+  auto next_material = mat_list.begin();
 
   // create volumes and add surfaces
-  for (int i = 1; i <= count; i++) {
-    const TopoDS_Shape &shape = shape_list.Value(i);
-
+  for (const TopoDS_Shape &shape : shape_list) {
     moab::EntityHandle vol = mbtool.make_new_volume();
 
     for (TopExp_Explorer ex(shape, TopAbs_FACE); ex.More(); ex.Next()) {
@@ -277,50 +253,28 @@ void facet_all_volumes(const TopTools_HSequenceOfShape &shape_list,
     // if single_material is set, then ignore materials list
     if (!single_material.empty()) {
       material_volumes[single_material].push_back(vol);
-    } else if (!mats_reversed.empty()) {
-      std::string material = mats_reversed.back();
-      mats_reversed.pop_back();
+    } else if (next_material != mat_list.end()) {
+      const std::string &material = *(next_material++);
       material_volumes[material].push_back(vol);
     }
   }
 
   if (special_case) {
     // temporary hack to get the test to pass (with early return)
-    std::vector<moab::EntityHandle> empty_list;
-    mbtool.add_group("dummy_mat", empty_list);
+    mbtool.add_group("dummy_mat", {});
     return;
   }
 
   // create material groups
   for (auto &pair : material_volumes) {
     std::string material = pair.first;
-    std::vector<moab::EntityHandle> &volumes = pair.second;
 
     // add "mat:"" prefix, unless it's already there
     if (!material.empty() && material.rfind("mat:", 0) != 0) {
       material = "mat:" + material;
     }
 
-    mbtool.add_group(material, volumes);
-  }
-}
-
-void sew_shapes(const TopoDS_Shape &shape, TopTools_HSequenceOfShape &sewed_shapes) {
-  if (shape.ShapeType() == TopAbs_COMPOUND) {
-    // decend and get children
-    for (TopoDS_Iterator it = TopoDS_Iterator(shape); it.More(); it.Next()) {
-      sew_shapes(it.Value(), sewed_shapes);
-    }
-  } else if (shape.ShapeType() == TopAbs_SOLID) {
-    // sew together all the curves
-    BRepOffsetAPI_Sewing sew;
-    sew.Add(shape);
-    sew.Perform();
-
-    // insert into the list
-    sewed_shapes.Append(sew.SewedShape());
-  } else {
-    std::cout << "Unknown shape type " << shape.ShapeType() << std::endl;
+    mbtool.add_group(material, pair.second);
   }
 }
 
@@ -328,7 +282,15 @@ void sew_and_facet2(TopoDS_Shape &shape, const FacetingTolerance& facet_tol, MBT
                     std::vector<std::string> &mat_list, std::string single_material,
                     bool special_case) {
   TopTools_HSequenceOfShape shape_list;
-  sew_shapes(shape, shape_list);
+  for (TopExp_Explorer solids(shape, TopAbs_SOLID); solids.More(); solids.Next()) {
+    // sew together all the curves
+    BRepOffsetAPI_Sewing sew;
+    sew.Add(solids.Current());
+    sew.Perform();
+
+    // insert into the list
+    shape_list.Append(sew.SewedShape());
+  }
   std::cout << "Instanciated " << shape_list.Length() << " items from file" << std::endl;
 
   if (mat_list.size() < shape_list.Length()) {

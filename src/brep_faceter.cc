@@ -162,13 +162,9 @@ void facet_all_volumes(const TopTools_HSequenceOfShape &shape_list,
     }
   }
 
-  // Do the hard work in parallel.  There's an old comment about OpenMP having
-  // restrictions that prevent this from working with a range based loop, would
-  // be interesting to know where this came from because they work for me with
-  // Clang 15.  That said, this doesn't help now because iterating over surfaceMap
-  // gives items rather then keys.
 #pragma omp parallel for
   for (int i = 1; i <= surfaceMap.Extent(); i++) {
+    /*=====  Perform Faceting  =====*/
     // This constructor calls Perform() to mutate the face adding triangulation
     // that can be used by the following serial code
     BRepMesh_IncrementalMesh(surfaceMap.FindKey(i), facet_tol.tolerance, facet_tol.is_relative, 0.5);

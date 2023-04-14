@@ -139,15 +139,37 @@ void make_edge_facets(MBTool &mbtool,
   mbtool.add_entities(curve, edge_entities);
 }
 
-void facet_all_volumes(const TopTools_HSequenceOfShape &shape_list,
-                       const FacetingTolerance& facet_tol,
-                       MBTool &mbtool,
-                       std::string single_material, bool special_case,
-                       std::vector<std::string> &mat_list) {
+class BrepFaceter
+{
+private:
+  void facet(const TopTools_HSequenceOfShape &shape_list,
+             const FacetingTolerance& facet_tol);
+
+  void add_materials(std::string single_material, bool special_case,
+                     std::vector<std::string> &mat_list);
+
+
+public:
+  BrepFaceter(MBTool &mbt) : mbtool(mbt) {}
+
+  void facet_all_volumes(const TopTools_HSequenceOfShape &shape_list,
+                      const FacetingTolerance& facet_tol,
+                      std::string single_material, bool special_case,
+                      std::vector<std::string> &mat_list) {
+    facet(shape_list, facet_tol);
+    add_materials(single_material, special_case, mat_list);
+  }
+
+private:
+  MBTool &mbtool;
   MapFaceToSurface surfaceMap;
   MapEdgeToCurve edgeMap;
   MapVertexToMeshset vertexMap;
+  entity_vector volumesList;
+};
 
+void BrepFaceter::facet(const TopTools_HSequenceOfShape &shape_list,
+                        const FacetingTolerance& facet_tol) {
   // list unique faces, create empty surfaces, and build surface map
 
   // Important note: For the maps, edge/face equivalence is defined
@@ -231,15 +253,10 @@ void facet_all_volumes(const TopTools_HSequenceOfShape &shape_list,
       << " surfaces found without facets." << std::endl;
   }
 
-  // build a list of volumes for each material
-  std::map<std::string, entity_vector> material_volumes;
-
-  // keep track of where we are in the material list
-  auto next_material = mat_list.begin();
-
   // create volumes and add surfaces
   for (const TopoDS_Shape &shape : shape_list) {
     moab::EntityHandle vol = mbtool.make_new_volume();
+    volumesList.push_back(vol);
 
     for (TopExp_Explorer ex(shape, TopAbs_FACE); ex.More(); ex.Next()) {
       const TopoDS_Face &face = TopoDS::Face(ex.Current());
@@ -247,9 +264,19 @@ void facet_all_volumes(const TopTools_HSequenceOfShape &shape_list,
       int sense = face.Orientation() == TopAbs_REVERSED ? moab::SENSE_REVERSE : moab::SENSE_FORWARD;
       mbtool.add_child_to_parent(surface, vol, sense);
     }
+  }
+}
 
-    // update map from material name to volumes
+void BrepFaceter::add_materials(std::string single_material, bool special_case,
+                    std::vector<std::string> &mat_list) {
+  // build a list of volumes for each material
+  std::map<std::string, entity_vector> material_volumes;
 
+  // keep track of where we are in the material list
+  auto next_material = mat_list.begin();
+
+  // update map from material name to volumes
+  for (moab::EntityHandle vol : volumesList) {
     // if single_material is set, then ignore materials list
     if (!single_material.empty()) {
       material_volumes[single_material].push_back(vol);
@@ -298,7 +325,8 @@ void sew_and_facet2(TopoDS_Shape &shape, const FacetingTolerance& facet_tol, MBT
     return;
   }
 
-  facet_all_volumes(shape_list, facet_tol, mbtool, single_material, special_case, mat_list);
+  BrepFaceter bf(mbtool);
+  bf.facet_all_volumes(shape_list, facet_tol, single_material, special_case, mat_list);
 }
 
 void read_materials_list(std::string text_file, std::vector<std::string> &mat_list) {

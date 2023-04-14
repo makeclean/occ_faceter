@@ -166,10 +166,14 @@ private:
   MapEdgeToCurve edgeMap;
   MapVertexToMeshset vertexMap;
   entity_vector volumesList;
+
+  void create_surfaces(const TopTools_HSequenceOfShape &shape_list);
+  void perform_faceting(const FacetingTolerance& facet_tol);
+  void add_children_to_surfaces();
+  void create_volumes_and_add_surfaces(const TopTools_HSequenceOfShape &shape_list);
 };
 
-void BrepFaceter::facet(const TopTools_HSequenceOfShape &shape_list,
-                        const FacetingTolerance& facet_tol) {
+void BrepFaceter::create_surfaces(const TopTools_HSequenceOfShape &shape_list) {
   // list unique faces, create empty surfaces, and build surface map
 
   // Important note: For the maps, edge/face equivalence is defined
@@ -183,15 +187,19 @@ void BrepFaceter::facet(const TopTools_HSequenceOfShape &shape_list,
       surfaceMap.Add(face, mbtool.make_new_surface());
     }
   }
+}
+
+void BrepFaceter::perform_faceting(const FacetingTolerance& facet_tol) {
 
 #pragma omp parallel for
   for (int i = 1; i <= surfaceMap.Extent(); i++) {
-    /*=====  Perform Faceting  =====*/
     // This constructor calls Perform() to mutate the face adding triangulation
     // that can be used by the following serial code
     BRepMesh_IncrementalMesh(surfaceMap.FindKey(i), facet_tol.tolerance, facet_tol.is_relative, 0.5);
   }
+}
 
+void BrepFaceter::add_children_to_surfaces() {
   // add facets (and edges) to surfaces
   int n_surfaces_without_facets = 0;
   for (MapFaceToSurface::Iterator it(surfaceMap); it.More(); it.Next()) {
@@ -252,7 +260,9 @@ void BrepFaceter::facet(const TopTools_HSequenceOfShape &shape_list,
     std::cout << "Warning: " << n_surfaces_without_facets
       << " surfaces found without facets." << std::endl;
   }
+}
 
+void BrepFaceter::create_volumes_and_add_surfaces(const TopTools_HSequenceOfShape &shape_list) {
   // create volumes and add surfaces
   for (const TopoDS_Shape &shape : shape_list) {
     moab::EntityHandle vol = mbtool.make_new_volume();
@@ -265,6 +275,14 @@ void BrepFaceter::facet(const TopTools_HSequenceOfShape &shape_list,
       mbtool.add_child_to_parent(surface, vol, sense);
     }
   }
+}
+
+void BrepFaceter::facet(const TopTools_HSequenceOfShape &shape_list,
+                        const FacetingTolerance& facet_tol) {
+  create_surfaces(shape_list);
+  perform_faceting(facet_tol);
+  add_children_to_surfaces();
+  create_volumes_and_add_surfaces(shape_list);
 }
 
 void BrepFaceter::add_materials(std::string single_material, bool special_case,

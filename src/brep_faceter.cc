@@ -172,12 +172,6 @@ private:
   void add_children_to_surfaces();
   void create_volumes_and_add_surfaces(const TopTools_HSequenceOfShape &shape_list);
 
-//  const TopoDS_Face *currentFace;
-//  const TopoDS_Edge *currentEdge;
-//  Handle(Poly_Triangulation) currentFaceTriangulation;
-//  const TopLoc_Location *currentTriangulationLocation;
-//  const entity_vector *currentSurfaceVertices;
-
   void add_curve_to_surface(const TopoDS_Edge &currentEdge,
                             const TopoDS_Face &face,
                             moab::EntityHandle surface,

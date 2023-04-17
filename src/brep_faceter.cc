@@ -37,25 +37,36 @@
 #include "BRep_Builder.hxx"
 #include "NCollection_IndexedDataMap.hxx"
 
+// Terminology:
+//
+// Open Cascade Shape - corresponding moab meshset
+//  [Material] - Group
+//  Solid      - Volume
+//  Face       - Surface
+//  Edge       - Curve
+//  Vertex     - Vertex
+//
+// Triangles from triangulation / faceted surfaces:
+//  Triangles and Nodes (not "verticies")
+//  MBEdge is two nodes, PolyEdge is multiple nodes
+
 typedef NCollection_IndexedDataMap<TopoDS_Face, moab::EntityHandle, TopTools_ShapeMapHasher> MapFaceToSurface;
 typedef NCollection_IndexedDataMap<TopoDS_Edge, moab::EntityHandle, TopTools_ShapeMapHasher> MapEdgeToCurve;
 typedef NCollection_IndexedDataMap<TopoDS_Vertex, moab::EntityHandle, TopTools_ShapeMapHasher> MapVertexToMeshset;
 
-entity_vector make_surface_verticies(MBTool &mbtool,
-                                     moab::EntityHandle surface,
-                                     const Poly_Triangulation &triangulation,
-                                     const TopLoc_Location &location) {
+entity_vector create_surface_nodes(MBTool &mbtool,
+                                   const Poly_Triangulation &triangulation,
+                                   const TopLoc_Location &location) {
   const gp_Trsf &local_transform = location;
-  entity_vector verticies;
+  entity_vector nodes;
   // retrieve facet data
   for (int i = 1; i <= triangulation.NbNodes(); i++) {
     Standard_Real x, y, z;
     triangulation.Node(i).Coord(x, y, z);
     local_transform.Transforms(x, y, z);
-    verticies.push_back(mbtool.find_or_create_vertex({x, y, z}));
+    nodes.push_back(mbtool.find_or_create_vertex({x, y, z}));
   }
-  mbtool.add_entities(surface, verticies);
-  return verticies;
+  return nodes;
 }
 
 void make_surface_facets(MBTool &mbtool,
@@ -262,7 +273,8 @@ void BrepFaceter::add_children_to_surfaces() {
     }
 
     // make facets for current face
-    entity_vector verticies = make_surface_verticies(mbtool, surface, triangulation, location);
+    entity_vector verticies = create_surface_nodes(mbtool, triangulation, location);
+    mbtool.add_entities(surface, verticies);
 
     make_surface_facets(mbtool, surface, triangulation, verticies);
 

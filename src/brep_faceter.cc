@@ -72,7 +72,7 @@ void create_surface_triangles(entity_vector &triangles,
                               MBTool &mbtool,
                               moab::EntityHandle surface,
                               const Poly_Triangulation &triangulation,
-                              const entity_vector &verticies) {
+                              const entity_vector &nodes) {
 
   //     std::cout << "Face has " << tris.Length() << " triangles" << std::endl;
   for (int i = 1; i <= triangulation.NbTriangles(); i++) {
@@ -83,9 +83,9 @@ void create_surface_triangles(entity_vector &triangles,
     tri.Get(a, b, c);
     // subtract one because OCC uses one based indexing
     std::array<moab::EntityHandle,3> connections = {
-      verticies.at(a - 1),
-      verticies.at(b - 1),
-      verticies.at(c - 1),
+      nodes.at(a - 1),
+      nodes.at(b - 1),
+      nodes.at(c - 1),
     };
     if (connections[2] == connections[1] ||
         connections[1] == connections[0] ||
@@ -103,7 +103,7 @@ void make_edge_facets(MBTool &mbtool,
                       const TopoDS_Edge &currentEdge,
                       const Handle(Poly_Triangulation) &triangulation,
                       const TopLoc_Location &location,
-                      const entity_vector &verticies) {
+                      const entity_vector &nodes) {
   // get the faceting for the edge
   Handle(Poly_PolygonOnTriangulation) edges =
       BRep_Tool::PolygonOnTriangulation(currentEdge, triangulation, location);
@@ -125,12 +125,12 @@ void make_edge_facets(MBTool &mbtool,
   auto occ_edge_it = lines.cbegin();
 
   // subtract one because OCC uses one based indexing
-  moab::EntityHandle prev = verticies.at(*occ_edge_it - 1);
+  moab::EntityHandle prev = nodes.at(*occ_edge_it - 1);
   vertex_entities.push_back(prev);
   occ_edge_it++;
 
   for (; occ_edge_it != lines.cend(); occ_edge_it++) {
-    moab::EntityHandle vert = verticies.at(*occ_edge_it - 1);
+    moab::EntityHandle vert = nodes.at(*occ_edge_it - 1);
     moab::EntityHandle edge = mbtool.create_edge({prev, vert});
 
     vertex_entities.push_back(vert);
@@ -143,7 +143,7 @@ void make_edge_facets(MBTool &mbtool,
     vertex_entities.pop_back();
   }
 
-  // add vertices and edges to curve
+  // add verticies and edges to curve
   mbtool.add_entities(curve, vertex_entities);
   mbtool.add_entities(curve, edge_entities);
 }
@@ -185,12 +185,12 @@ private:
                     const TopoDS_Face &face,
                     const Handle(Poly_Triangulation) &triangulation,
                     const TopLoc_Location &location,
-                    const entity_vector &verticies) {
+                    const entity_vector &nodes) {
     moab::EntityHandle curve = mbtool.make_new_curve();
 
-    make_edge_facets(mbtool, curve, currentEdge, triangulation, location, verticies);
+    make_edge_facets(mbtool, curve, currentEdge, triangulation, location, nodes);
 
-    // add vertices to edges
+    // add verticies to edges
     for (TopExp_Explorer explorer(currentEdge, TopAbs_VERTEX); explorer.More(); explorer.Next()) {
       const TopoDS_Vertex &currentVertex = TopoDS::Vertex(explorer.Current());
 
@@ -217,10 +217,10 @@ private:
                             moab::EntityHandle surface,
                             const Handle(Poly_Triangulation) &triangulation,
                             const TopLoc_Location &location,
-                            const entity_vector &verticies) {
+                            const entity_vector &nodes) {
     moab::EntityHandle curve;
     if (!edgeMap.FindFromKey(currentEdge, curve)) {
-      curve = create_curve(currentEdge, face, triangulation, location, verticies);
+      curve = create_curve(currentEdge, face, triangulation, location, nodes);
       edgeMap.Add(currentEdge, curve);
     }
     int sense = currentEdge.Orientation() != face.Orientation() ? moab::SENSE_REVERSE : moab::SENSE_FORWARD;

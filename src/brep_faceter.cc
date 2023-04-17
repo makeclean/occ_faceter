@@ -68,11 +68,11 @@ void create_surface_nodes(entity_vector &nodes,
   }
 }
 
-void make_surface_facets(MBTool &mbtool,
-                        moab::EntityHandle surface,
-                        const Poly_Triangulation &triangulation,
-                        const entity_vector &verticies) {
-  entity_vector triangles;
+void create_surface_triangles(entity_vector &triangles,
+                              MBTool &mbtool,
+                              moab::EntityHandle surface,
+                              const Poly_Triangulation &triangulation,
+                              const entity_vector &verticies) {
 
   //     std::cout << "Face has " << tris.Length() << " triangles" << std::endl;
   for (int i = 1; i <= triangulation.NbTriangles(); i++) {
@@ -95,7 +95,6 @@ void make_surface_facets(MBTool &mbtool,
       triangles.push_back(mbtool.create_triangle(connections));
     }
   }
-  mbtool.add_entities(surface, triangles);
 }
 
 // make the edge facets
@@ -276,7 +275,9 @@ void BrepFaceter::add_children_to_surfaces() {
     create_surface_nodes(nodes, mbtool, triangulation, location);
     mbtool.add_entities(surface, nodes);
 
-    make_surface_facets(mbtool, surface, triangulation, nodes);
+    entity_vector triangles;
+    create_surface_triangles(triangles, mbtool, surface, triangulation, nodes);
+    mbtool.add_entities(surface, triangles);
 
     // add curves to surface
     for (TopExp_Explorer edges(face, TopAbs_EDGE); edges.More(); edges.Next()) {

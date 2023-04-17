@@ -54,11 +54,11 @@ typedef NCollection_IndexedDataMap<TopoDS_Face, moab::EntityHandle, TopTools_Sha
 typedef NCollection_IndexedDataMap<TopoDS_Edge, moab::EntityHandle, TopTools_ShapeMapHasher> MapEdgeToCurve;
 typedef NCollection_IndexedDataMap<TopoDS_Vertex, moab::EntityHandle, TopTools_ShapeMapHasher> MapVertexToMeshset;
 
-entity_vector create_surface_nodes(MBTool &mbtool,
-                                   const Poly_Triangulation &triangulation,
-                                   const TopLoc_Location &location) {
+void create_surface_nodes(entity_vector &nodes,
+                          MBTool &mbtool,
+                          const Poly_Triangulation &triangulation,
+                          const TopLoc_Location &location) {
   const gp_Trsf &local_transform = location;
-  entity_vector nodes;
   // retrieve facet data
   for (int i = 1; i <= triangulation.NbNodes(); i++) {
     Standard_Real x, y, z;
@@ -66,7 +66,6 @@ entity_vector create_surface_nodes(MBTool &mbtool,
     local_transform.Transforms(x, y, z);
     nodes.push_back(mbtool.find_or_create_vertex({x, y, z}));
   }
-  return nodes;
 }
 
 void make_surface_facets(MBTool &mbtool,
@@ -273,15 +272,16 @@ void BrepFaceter::add_children_to_surfaces() {
     }
 
     // make facets for current face
-    entity_vector verticies = create_surface_nodes(mbtool, triangulation, location);
-    mbtool.add_entities(surface, verticies);
+    entity_vector nodes;
+    create_surface_nodes(nodes, mbtool, triangulation, location);
+    mbtool.add_entities(surface, nodes);
 
-    make_surface_facets(mbtool, surface, triangulation, verticies);
+    make_surface_facets(mbtool, surface, triangulation, nodes);
 
     // add curves to surface
     for (TopExp_Explorer edges(face, TopAbs_EDGE); edges.More(); edges.Next()) {
       const TopoDS_Edge &currentEdge = TopoDS::Edge(edges.Current());
-      add_curve_to_surface(currentEdge, face, surface, triangulation, location, verticies);
+      add_curve_to_surface(currentEdge, face, surface, triangulation, location, nodes);
     }
   }
 

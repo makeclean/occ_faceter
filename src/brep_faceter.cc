@@ -181,6 +181,35 @@ private:
   void add_children_to_surfaces();
   void create_volumes_and_add_surfaces(const TopTools_HSequenceOfShape &shape_list);
 
+  void create_vertex_meshsets(const TopoDS_Edge &currentEdge, moab::EntityHandle curve) {
+
+    for (TopExp_Explorer explorer(currentEdge, TopAbs_VERTEX); explorer.More(); explorer.Next()) {
+      const TopoDS_Vertex &currentVertex = TopoDS::Vertex(explorer.Current());
+
+      moab::EntityHandle meshset;
+      if (!vertexMap.FindFromKey(currentVertex, meshset)) {
+        meshset = mbtool.make_new_vertex();
+        vertexMap.Add(currentVertex, meshset);
+      }
+
+      mbtool.add_child_to_parent(meshset, curve);
+    }
+  }
+
+  void create_vertex_nodes()
+  {
+    for (MapVertexToMeshset::Iterator it(vertexMap); it.More(); it.Next()) {
+      const TopoDS_Vertex &vertex = it.Key();
+      moab::EntityHandle meshset = it.Value();
+
+      double x, y, z;
+      BRep_Tool::Pnt(vertex).Coord().Coord(x, y, z);
+      moab::EntityHandle node = mbtool.find_or_create_vertex({x, y, z});
+
+      mbtool.add_entity(meshset, node);
+    }
+  }
+
   moab::EntityHandle create_curve(const TopoDS_Edge &currentEdge,
                     const TopoDS_Face &face,
                     const Handle(Poly_Triangulation) &triangulation,
@@ -190,25 +219,7 @@ private:
 
     make_edge_facets(mbtool, curve, currentEdge, triangulation, location, nodes);
 
-    // add verticies to edges
-    for (TopExp_Explorer explorer(currentEdge, TopAbs_VERTEX); explorer.More(); explorer.Next()) {
-      const TopoDS_Vertex &currentVertex = TopoDS::Vertex(explorer.Current());
-
-      moab::EntityHandle meshset;
-      if (!vertexMap.FindFromKey(currentVertex, meshset)) {
-        double x, y, z;
-        BRep_Tool::Pnt(currentVertex).Coord().Coord(x, y, z);
-        moab::EntityHandle node = mbtool.find_or_create_vertex({x, y, z});
-
-        // create meshset for the vertex, add its node, then add it to the map
-        meshset = mbtool.make_new_vertex();
-        mbtool.add_entity(meshset, node);
-
-        vertexMap.Add(currentVertex, meshset);
-      }
-
-      mbtool.add_child_to_parent(meshset, curve);
-    }
+    create_vertex_meshsets(currentEdge, curve);
     return curve;
   }
 
@@ -285,6 +296,8 @@ void BrepFaceter::add_children_to_surfaces() {
       add_curve_to_surface(currentEdge, face, surface, triangulation, location, nodes);
     }
   }
+
+  create_vertex_nodes();
 
   if (n_surfaces_without_facets > 0) {
     std::cout << "Warning: " << n_surfaces_without_facets

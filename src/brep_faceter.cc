@@ -210,19 +210,6 @@ private:
     }
   }
 
-  moab::EntityHandle create_curve(const TopoDS_Edge &currentEdge,
-                    const TopoDS_Face &face,
-                    const Handle(Poly_Triangulation) &triangulation,
-                    const TopLoc_Location &location,
-                    const entity_vector &nodes) {
-    moab::EntityHandle curve = mbtool.make_new_curve();
-
-    make_edge_facets(mbtool, curve, currentEdge, triangulation, location, nodes);
-
-    create_vertex_meshsets(currentEdge, curve);
-    return curve;
-  }
-
   void add_curve_to_surface(const TopoDS_Edge &currentEdge,
                             const TopoDS_Face &face,
                             moab::EntityHandle surface,
@@ -231,7 +218,9 @@ private:
                             const entity_vector &nodes) {
     moab::EntityHandle curve;
     if (!edgeMap.FindFromKey(currentEdge, curve)) {
-      curve = create_curve(currentEdge, face, triangulation, location, nodes);
+      curve = mbtool.make_new_curve();
+      make_edge_facets(mbtool, curve, currentEdge, triangulation, location, nodes);
+      create_vertex_meshsets(currentEdge, curve);
       edgeMap.Add(currentEdge, curve);
     }
     int sense = currentEdge.Orientation() != face.Orientation() ? moab::SENSE_REVERSE : moab::SENSE_FORWARD;

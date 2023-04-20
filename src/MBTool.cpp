@@ -202,7 +202,7 @@ void MBTool::add_child_to_parent(moab::EntityHandle vertex,
 }
 
 // check for the existence of a vertex, and create a new one if necessary
-moab::EntityHandle MBTool::find_or_create_vertex(std::array<double,3> coord) {
+moab::EntityHandle MBTool::find_or_create_node(std::array<double,3> coord) {
     if (scale_factor != 1) {
         coord[0] *= scale_factor;
         coord[1] *= scale_factor;

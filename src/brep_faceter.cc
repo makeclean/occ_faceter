@@ -64,7 +64,7 @@ void create_surface_nodes(entity_vector &nodes,
     Standard_Real x, y, z;
     triangulation.Node(i).Coord(x, y, z);
     local_transform.Transforms(x, y, z);
-    nodes.push_back(mbtool.find_or_create_vertex({x, y, z}));
+    nodes.push_back(mbtool.find_or_create_node({x, y, z}));
   }
 }
 
@@ -204,27 +204,10 @@ private:
 
       double x, y, z;
       BRep_Tool::Pnt(vertex).Coord().Coord(x, y, z);
-      moab::EntityHandle node = mbtool.find_or_create_vertex({x, y, z});
+      moab::EntityHandle node = mbtool.find_or_create_node({x, y, z});
 
       mbtool.add_entity(meshset, node);
     }
-  }
-
-  void add_curve_to_surface(const TopoDS_Edge &currentEdge,
-                            const TopoDS_Face &face,
-                            moab::EntityHandle surface,
-                            const Handle(Poly_Triangulation) &triangulation,
-                            const TopLoc_Location &location,
-                            const entity_vector &nodes) {
-    moab::EntityHandle curve;
-    if (!edgeMap.FindFromKey(currentEdge, curve)) {
-      curve = mbtool.make_new_curve();
-      make_edge_facets(mbtool, curve, currentEdge, triangulation, location, nodes);
-      create_vertex_meshsets(currentEdge, curve);
-      edgeMap.Add(currentEdge, curve);
-    }
-    int sense = currentEdge.Orientation() != face.Orientation() ? moab::SENSE_REVERSE : moab::SENSE_FORWARD;
-    mbtool.add_child_to_parent(curve, surface, sense);
   }
 };
 
@@ -270,7 +253,7 @@ void BrepFaceter::add_children_to_surfaces() {
       continue;
     }
 
-    // make facets for current face
+    // add contents to surface
     entity_vector nodes;
     create_surface_nodes(nodes, mbtool, triangulation, location);
     mbtool.add_entities(surface, nodes);
@@ -279,10 +262,18 @@ void BrepFaceter::add_children_to_surfaces() {
     create_surface_triangles(triangles, mbtool, surface, triangulation, nodes);
     mbtool.add_entities(surface, triangles);
 
-    // add curves to surface
+    // recursively create and add childen (curves and verticies)
     for (TopExp_Explorer edges(face, TopAbs_EDGE); edges.More(); edges.Next()) {
       const TopoDS_Edge &currentEdge = TopoDS::Edge(edges.Current());
-      add_curve_to_surface(currentEdge, face, surface, triangulation, location, nodes);
+      moab::EntityHandle curve;
+      if (!edgeMap.FindFromKey(currentEdge, curve)) {
+        curve = mbtool.make_new_curve();
+        make_edge_facets(mbtool, curve, currentEdge, triangulation, location, nodes);
+        create_vertex_meshsets(currentEdge, curve);
+        edgeMap.Add(currentEdge, curve);
+      }
+      int sense = currentEdge.Orientation() != face.Orientation() ? moab::SENSE_REVERSE : moab::SENSE_FORWARD;
+      mbtool.add_child_to_parent(curve, surface, sense);
     }
   }
 
@@ -311,6 +302,8 @@ void BrepFaceter::create_volumes_and_add_surfaces(const TopTools_HSequenceOfShap
 
 void BrepFaceter::facet(const TopTools_HSequenceOfShape &shape_list,
                         const FacetingTolerance& facet_tol) {
+  // populate surfaceMap (with early creations of surface meshsets) so we have a
+  // set of unique faces for faceting
   create_surfaces(shape_list);
   perform_faceting(facet_tol);
   add_children_to_surfaces();

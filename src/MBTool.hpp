@@ -42,7 +42,7 @@ public:
 
   void write_geometry(const std::string &filename);
 
-  moab::EntityHandle find_or_create_vertex(std::array<double,3> point);
+  moab::EntityHandle find_or_create_node(std::array<double,3> point);
   moab::EntityHandle create_triangle(std::array<moab::EntityHandle,3> verticies);
   moab::EntityHandle create_edge(std::array<moab::EntityHandle,2> verticies);
   void add_entities(moab::EntityHandle parent, const entity_vector &children);

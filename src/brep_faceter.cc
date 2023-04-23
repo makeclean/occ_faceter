@@ -239,6 +239,15 @@ private:
     }
     return true;
   }
+
+  void populate_volume(moab::EntityHandle vol, const TopoDS_Shape &shape) {
+    for (TopExp_Explorer ex(shape, TopAbs_FACE); ex.More(); ex.Next()) {
+      const TopoDS_Face &face = TopoDS::Face(ex.Current());
+      moab::EntityHandle surface = surfaceMap.FindFromKey(face);
+      int sense = face.Orientation() == TopAbs_REVERSED ? moab::SENSE_REVERSE : moab::SENSE_FORWARD;
+      mbtool.add_child_to_parent(surface, vol, sense);
+    }
+  }
 };
 
 void BrepFaceter::create_surfaces(const TopTools_HSequenceOfShape &shape_list) {
@@ -290,17 +299,11 @@ void BrepFaceter::populate_surfaces() {
 }
 
 void BrepFaceter::create_volumes_and_add_children(const TopTools_HSequenceOfShape &shape_list) {
-  // create volumes and add surfaces
   for (const TopoDS_Shape &shape : shape_list) {
     moab::EntityHandle vol = mbtool.make_new_volume();
     volumesList.push_back(vol);
 
-    for (TopExp_Explorer ex(shape, TopAbs_FACE); ex.More(); ex.Next()) {
-      const TopoDS_Face &face = TopoDS::Face(ex.Current());
-      moab::EntityHandle surface = surfaceMap.FindFromKey(face);
-      int sense = face.Orientation() == TopAbs_REVERSED ? moab::SENSE_REVERSE : moab::SENSE_FORWARD;
-      mbtool.add_child_to_parent(surface, vol, sense);
-    }
+    populate_volume(vol, shape);
   }
 }
 

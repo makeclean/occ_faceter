@@ -133,27 +133,13 @@ private:
   void populate_surfaces();
   void create_volumes_and_add_children(const TopTools_HSequenceOfShape &shape_list);
 
-  void create_and_populate_verticies(const TopoDS_Edge &currentEdge, moab::EntityHandle curve) {
+  void populate_vertex(moab::EntityHandle meshset, const TopoDS_Vertex &currentVertex) {
+    // create and add contents
+    double x, y, z;
+    BRep_Tool::Pnt(currentVertex).Coord().Coord(x, y, z);
+    moab::EntityHandle node = mbtool.find_or_create_node({x, y, z});
 
-    for (TopExp_Explorer explorer(currentEdge, TopAbs_VERTEX); explorer.More(); explorer.Next()) {
-      const TopoDS_Vertex &currentVertex = TopoDS::Vertex(explorer.Current());
-
-      moab::EntityHandle meshset;
-      if (!vertexMap.FindFromKey(currentVertex, meshset)) {
-        // create vertex meshset
-        meshset = mbtool.make_new_vertex();
-        vertexMap.Add(currentVertex, meshset);
-
-        // create and add contents
-        double x, y, z;
-        BRep_Tool::Pnt(currentVertex).Coord().Coord(x, y, z);
-        moab::EntityHandle node = mbtool.find_or_create_node({x, y, z});
-
-        mbtool.add_entity(meshset, node);
-      }
-
-      mbtool.add_child_to_parent(meshset, curve);
-    }
+    mbtool.add_entity(meshset, node);
   }
 
   void populate_curve(moab::EntityHandle curve,
@@ -204,7 +190,20 @@ private:
       mbtool.add_entities(curve, node_entities);
       mbtool.add_entities(curve, mbedge_entities);
 
-      create_and_populate_verticies(currentEdge, curve);
+      // create and populate children
+      for (TopExp_Explorer explorer(currentEdge, TopAbs_VERTEX); explorer.More(); explorer.Next()) {
+        const TopoDS_Vertex &currentVertex = TopoDS::Vertex(explorer.Current());
+
+        moab::EntityHandle meshset;
+        if (!vertexMap.FindFromKey(currentVertex, meshset)) {
+          meshset = mbtool.make_new_vertex();
+          vertexMap.Add(currentVertex, meshset);
+
+          populate_vertex(meshset, currentVertex);
+        }
+
+        mbtool.add_child_to_parent(meshset, curve);
+      }
   }
 };
 

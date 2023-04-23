@@ -49,6 +49,9 @@
 // Triangles from triangulation / faceted surfaces:
 //  Triangles and Nodes (not "verticies")
 //  MBEdge is two nodes, PolyEdge is multiple nodes
+//
+// "creating" a meshset includes adding it to the respective map
+// "populating" a meshset can include creating and adding contents and children
 
 typedef NCollection_IndexedDataMap<TopoDS_Face, moab::EntityHandle, TopTools_ShapeMapHasher> MapFaceToSurface;
 typedef NCollection_IndexedDataMap<TopoDS_Edge, moab::EntityHandle, TopTools_ShapeMapHasher> MapEdgeToCurve;
@@ -178,35 +181,29 @@ private:
 
   void create_surfaces(const TopTools_HSequenceOfShape &shape_list);
   void perform_faceting(const FacetingTolerance& facet_tol);
-  void add_children_to_surfaces();
-  void create_volumes_and_add_surfaces(const TopTools_HSequenceOfShape &shape_list);
+  void create_and_populate_surfaces_edges_and_verticies();
+  void create_volumes_and_add_children(const TopTools_HSequenceOfShape &shape_list);
 
-  void create_vertex_meshsets(const TopoDS_Edge &currentEdge, moab::EntityHandle curve) {
+  void create_and_populate_verticies(const TopoDS_Edge &currentEdge, moab::EntityHandle curve) {
 
     for (TopExp_Explorer explorer(currentEdge, TopAbs_VERTEX); explorer.More(); explorer.Next()) {
       const TopoDS_Vertex &currentVertex = TopoDS::Vertex(explorer.Current());
 
       moab::EntityHandle meshset;
       if (!vertexMap.FindFromKey(currentVertex, meshset)) {
+        // create vertex meshset
         meshset = mbtool.make_new_vertex();
         vertexMap.Add(currentVertex, meshset);
+
+        // create and add contents
+        double x, y, z;
+        BRep_Tool::Pnt(currentVertex).Coord().Coord(x, y, z);
+        moab::EntityHandle node = mbtool.find_or_create_node({x, y, z});
+
+        mbtool.add_entity(meshset, node);
       }
 
       mbtool.add_child_to_parent(meshset, curve);
-    }
-  }
-
-  void create_vertex_nodes()
-  {
-    for (MapVertexToMeshset::Iterator it(vertexMap); it.More(); it.Next()) {
-      const TopoDS_Vertex &vertex = it.Key();
-      moab::EntityHandle meshset = it.Value();
-
-      double x, y, z;
-      BRep_Tool::Pnt(vertex).Coord().Coord(x, y, z);
-      moab::EntityHandle node = mbtool.find_or_create_node({x, y, z});
-
-      mbtool.add_entity(meshset, node);
     }
   }
 };
@@ -237,8 +234,10 @@ void BrepFaceter::perform_faceting(const FacetingTolerance& facet_tol) {
   }
 }
 
-void BrepFaceter::add_children_to_surfaces() {
-  // add facets (and edges) to surfaces
+void BrepFaceter::create_and_populate_surfaces_edges_and_verticies() {
+  // Note: surface meshsets have actually been created early, but they are
+  // populated here, and edge and vertex meshsets are created here.
+
   int n_surfaces_without_facets = 0;
   for (MapFaceToSurface::Iterator it(surfaceMap); it.More(); it.Next()) {
     const TopoDS_Face &face = it.Key();
@@ -269,7 +268,7 @@ void BrepFaceter::add_children_to_surfaces() {
       if (!edgeMap.FindFromKey(currentEdge, curve)) {
         curve = mbtool.make_new_curve();
         make_edge_facets(mbtool, curve, currentEdge, triangulation, location, nodes);
-        create_vertex_meshsets(currentEdge, curve);
+        create_and_populate_verticies(currentEdge, curve);
         edgeMap.Add(currentEdge, curve);
       }
       int sense = currentEdge.Orientation() != face.Orientation() ? moab::SENSE_REVERSE : moab::SENSE_FORWARD;
@@ -277,15 +276,13 @@ void BrepFaceter::add_children_to_surfaces() {
     }
   }
 
-  create_vertex_nodes();
-
   if (n_surfaces_without_facets > 0) {
     std::cout << "Warning: " << n_surfaces_without_facets
       << " surfaces found without facets." << std::endl;
   }
 }
 
-void BrepFaceter::create_volumes_and_add_surfaces(const TopTools_HSequenceOfShape &shape_list) {
+void BrepFaceter::create_volumes_and_add_children(const TopTools_HSequenceOfShape &shape_list) {
   // create volumes and add surfaces
   for (const TopoDS_Shape &shape : shape_list) {
     moab::EntityHandle vol = mbtool.make_new_volume();
@@ -305,9 +302,10 @@ void BrepFaceter::facet(const TopTools_HSequenceOfShape &shape_list,
   // populate surfaceMap (with early creations of surface meshsets) so we have a
   // set of unique faces for faceting
   create_surfaces(shape_list);
+
   perform_faceting(facet_tol);
-  add_children_to_surfaces();
-  create_volumes_and_add_surfaces(shape_list);
+  create_and_populate_surfaces_edges_and_verticies();
+  create_volumes_and_add_children(shape_list);
 }
 
 void BrepFaceter::add_materials(std::string single_material, bool special_case,

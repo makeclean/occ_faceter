@@ -130,7 +130,7 @@ private:
 
   void create_surfaces(const TopTools_HSequenceOfShape &shape_list);
   void perform_faceting(const FacetingTolerance& facet_tol);
-  void populate_surfaces();
+  void populate_all_surfaces();
   void create_volumes_and_add_children(const TopTools_HSequenceOfShape &shape_list);
 
   void populate_vertex(moab::EntityHandle meshset, const TopoDS_Vertex &currentVertex) {
@@ -276,7 +276,7 @@ void BrepFaceter::perform_faceting(const FacetingTolerance& facet_tol) {
   }
 }
 
-void BrepFaceter::populate_surfaces() {
+void BrepFaceter::populate_all_surfaces() {
   // Note: surface meshsets have actually been created early, but they are
   // populated here, and edge and vertex meshsets are created here.
 
@@ -319,7 +319,7 @@ void BrepFaceter::facet(const TopTools_HSequenceOfShape &shape_list,
   create_surfaces(shape_list);
 
   perform_faceting(facet_tol);
-  populate_surfaces();
+  populate_all_surfaces();
 
   // Note: Not much further "population" of volumes required, since they have
   // no contents (they do have children) and their children have already been

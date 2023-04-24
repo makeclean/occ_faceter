@@ -232,12 +232,12 @@ moab::EntityHandle MBTool::create_edge(const std::array<moab::EntityHandle,2> ve
   return result;
 }
 
-void MBTool::add_entities(moab::EntityHandle parent, const entity_vector &children) {
-  CHECK_MOAB_RVAL(mbi->add_entities(parent, children.data(), children.size()));
+void MBTool::add_entities(moab::EntityHandle meshset, const entity_vector &entities) {
+  CHECK_MOAB_RVAL(mbi->add_entities(meshset, entities.data(), entities.size()));
 }
 
-void MBTool::add_entity(moab::EntityHandle parent, moab::EntityHandle child) {
-  CHECK_MOAB_RVAL(mbi->add_entities(parent, &child, 1));
+void MBTool::add_entity(moab::EntityHandle meshset, moab::EntityHandle entity) {
+  CHECK_MOAB_RVAL(mbi->add_entities(meshset, &entity, 1));
 }
 
 // write the geometry

@@ -23,10 +23,6 @@ public:
 
 typedef std::vector<moab::EntityHandle> entity_vector;
 
-typedef std::vector<std::array<double, 3>> facet_coords;
-typedef std::vector<std::array<int, 3>> facet_connectivity;
-typedef std::map<moab::EntityHandle, moab::EntityHandle> ent_ent_map;
-
 class MBTool {
 public:
   MBTool();
@@ -45,8 +41,8 @@ public:
   moab::EntityHandle find_or_create_node(std::array<double,3> point);
   moab::EntityHandle create_triangle(std::array<moab::EntityHandle,3> verticies);
   moab::EntityHandle create_edge(std::array<moab::EntityHandle,2> verticies);
-  void add_entities(moab::EntityHandle parent, const entity_vector &children);
-  void add_entity(moab::EntityHandle parent, moab::EntityHandle child);
+  void add_entities(moab::EntityHandle meshset, const entity_vector &entities);
+  void add_entity(moab::EntityHandle meshset, moab::EntityHandle entity);
 
   void note_degenerate_triangle() {
     degenerate_triangle_count += 1;

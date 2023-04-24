@@ -292,8 +292,13 @@ void BrepFaceter::populate_surfaces() {
     }
   }
 
+  // Instead of outputting "No facets for surface" or "degenerate triangle
+  // not created" every time it occurs, we count occurences and then output
+  // a single warning message saying how many time the issue has occured
+  // (following an issue with many lines of unhelpful output when processing
+  // one example geometry).
   if (n_surfaces_without_facets > 0) {
-    std::cout << "Warning: " << n_surfaces_without_facets
+    std::cerr << "Warning: " << n_surfaces_without_facets
       << " surfaces found without facets." << std::endl;
   }
 }

@@ -23,10 +23,6 @@ public:
 
 typedef std::vector<moab::EntityHandle> entity_vector;
 
-typedef std::vector<std::array<double, 3>> facet_coords;
-typedef std::vector<std::array<int, 3>> facet_connectivity;
-typedef std::map<moab::EntityHandle, moab::EntityHandle> ent_ent_map;
-
 class MBTool {
 public:
   MBTool();

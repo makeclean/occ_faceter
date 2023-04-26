@@ -57,48 +57,6 @@ typedef NCollection_IndexedDataMap<TopoDS_Face, moab::EntityHandle, TopTools_Sha
 typedef NCollection_IndexedDataMap<TopoDS_Edge, moab::EntityHandle, TopTools_ShapeMapHasher> MapEdgeToCurve;
 typedef NCollection_IndexedDataMap<TopoDS_Vertex, moab::EntityHandle, TopTools_ShapeMapHasher> MapVertexToMeshset;
 
-void create_surface_nodes(entity_vector &nodes,
-                          MBTool &mbtool,
-                          const Poly_Triangulation &triangulation,
-                          const TopLoc_Location &location) {
-  const gp_Trsf &local_transform = location;
-  // retrieve facet data
-  for (int i = 1; i <= triangulation.NbNodes(); i++) {
-    Standard_Real x, y, z;
-    triangulation.Node(i).Coord(x, y, z);
-    local_transform.Transforms(x, y, z);
-    nodes.push_back(mbtool.find_or_create_node({x, y, z}));
-  }
-}
-
-void create_surface_triangles(entity_vector &triangles,
-                              MBTool &mbtool,
-                              moab::EntityHandle surface,
-                              const Poly_Triangulation &triangulation,
-                              const entity_vector &nodes) {
-
-  //     std::cout << "Face has " << tris.Length() << " triangles" << std::endl;
-  for (int i = 1; i <= triangulation.NbTriangles(); i++) {
-    // get the node indexes for this triangle
-    const Poly_Triangle &tri = triangulation.Triangle(i);
-
-    int a, b, c;
-    tri.Get(a, b, c);
-    // subtract one because OCC uses one based indexing
-    std::array<moab::EntityHandle,3> connections = {
-      nodes.at(a - 1),
-      nodes.at(b - 1),
-      nodes.at(c - 1),
-    };
-    if (connections[2] == connections[1] ||
-        connections[1] == connections[0] ||
-        connections[2] == connections[0] ) {
-      mbtool.note_degenerate_triangle();
-    } else {
-      triangles.push_back(mbtool.create_triangle(connections));
-    }
-  }
-}
 
 class BrepFaceter
 {
@@ -132,6 +90,9 @@ private:
   void perform_faceting(const FacetingTolerance& facet_tol);
   void populate_all_surfaces();
   void create_volumes_and_add_children(const TopTools_HSequenceOfShape &shape_list);
+
+  void create_surface_nodes(entity_vector &nodes, const Poly_Triangulation &triangulation, const TopLoc_Location &location);
+  void create_surface_triangles(entity_vector &triangles, moab::EntityHandle surface, const Poly_Triangulation &triangulation, const entity_vector &nodes);
 
   void populate_vertex(moab::EntityHandle meshset, const TopoDS_Vertex &currentVertex) {
     // create and add contents
@@ -218,11 +179,11 @@ private:
 
     // add contents to surface
     entity_vector nodes;
-    create_surface_nodes(nodes, mbtool, triangulation, location);
+    create_surface_nodes(nodes, triangulation, location);
     mbtool.add_entities(surface, nodes);
 
     entity_vector triangles;
-    create_surface_triangles(triangles, mbtool, surface, triangulation, nodes);
+    create_surface_triangles(triangles, surface, triangulation, nodes);
     mbtool.add_entities(surface, triangles);
 
     // recursively create, populate and add childen
@@ -262,6 +223,46 @@ void BrepFaceter::create_surfaces(const TopTools_HSequenceOfShape &shape_list) {
         continue;
 
       surfaceMap.Add(face, mbtool.make_new_surface());
+    }
+  }
+}
+
+void BrepFaceter::create_surface_nodes(entity_vector &nodes,
+                                       const Poly_Triangulation &triangulation,
+                                       const TopLoc_Location &location) {
+  const gp_Trsf &local_transform = location;
+  // retrieve facet data
+  for (int i = 1; i <= triangulation.NbNodes(); i++) {
+    Standard_Real x, y, z;
+    triangulation.Node(i).Coord(x, y, z);
+    local_transform.Transforms(x, y, z);
+    nodes.push_back(mbtool.find_or_create_node({x, y, z}));
+  }
+}
+
+void BrepFaceter::create_surface_triangles(entity_vector &triangles,
+                                           moab::EntityHandle surface,
+                                           const Poly_Triangulation &triangulation,
+                                           const entity_vector &nodes) {
+   //     std::cout << "Face has " << tris.Length() << " triangles" << std::endl;
+  for (int i = 1; i <= triangulation.NbTriangles(); i++) {
+    // get the node indexes for this triangle
+    const Poly_Triangle &tri = triangulation.Triangle(i);
+
+    int a, b, c;
+    tri.Get(a, b, c);
+    // subtract one because OCC uses one based indexing
+    std::array<moab::EntityHandle,3> connections = {
+      nodes.at(a - 1),
+      nodes.at(b - 1),
+      nodes.at(c - 1),
+    };
+    if (connections[2] == connections[1] ||
+        connections[1] == connections[0] ||
+        connections[2] == connections[0] ) {
+      mbtool.note_degenerate_triangle();
+    } else {
+      triangles.push_back(mbtool.create_triangle(connections));
     }
   }
 }

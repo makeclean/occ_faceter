@@ -44,10 +44,6 @@ public:
   void add_entities(moab::EntityHandle meshset, const entity_vector &entities);
   void add_entity(moab::EntityHandle meshset, moab::EntityHandle entity);
 
-  void note_degenerate_triangle() {
-    degenerate_triangle_count += 1;
-  }
-
   void add_child_to_parent(moab::EntityHandle child,
                            moab::EntityHandle parent, int sense);
   void add_child_to_parent(moab::EntityHandle child,
@@ -69,7 +65,6 @@ private:
 
   moab::GeomTopoTool *geom_tool;
   int entity_id[5]; // group, volume, surface, curve IDs (indexed by dim)
-  int degenerate_triangle_count;
   moab::EntityHandle rootset;
   moab::Tag geometry_dimension_tag, id_tag;
   moab::Tag faceting_tol_tag, geometry_resabs_tag;

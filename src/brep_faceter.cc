@@ -69,7 +69,7 @@ private:
 
 
 public:
-  BrepFaceter(MBTool &mbt) : mbtool(mbt) {}
+  BrepFaceter(MBTool &mbt) : mbtool(mbt), degenerate_triangle_count(0) {}
 
   void facet_all_volumes(const TopTools_HSequenceOfShape &shape_list,
                       const FacetingTolerance& facet_tol,
@@ -85,6 +85,8 @@ private:
   MapEdgeToCurve edgeMap;
   MapVertexToMeshset vertexMap;
   entity_vector volumesList;
+
+  int degenerate_triangle_count;
 
   void create_surfaces(const TopTools_HSequenceOfShape &shape_list);
   void perform_faceting(const FacetingTolerance& facet_tol);
@@ -260,7 +262,7 @@ void BrepFaceter::create_surface_triangles(entity_vector &triangles,
     if (connections[2] == connections[1] ||
         connections[1] == connections[0] ||
         connections[2] == connections[0] ) {
-      mbtool.note_degenerate_triangle();
+      degenerate_triangle_count += 1;
     } else {
       triangles.push_back(mbtool.create_triangle(connections));
     }
@@ -301,6 +303,11 @@ void BrepFaceter::populate_all_surfaces() {
   if (n_surfaces_without_facets > 0) {
     std::cerr << "Warning: " << n_surfaces_without_facets
       << " surfaces found without facets." << std::endl;
+  }
+
+  if (degenerate_triangle_count > 0) {
+    std::cerr << "Warning: " << degenerate_triangle_count
+      << " degenerate triangles have been ignored." << std::endl;
   }
 }
 

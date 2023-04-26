@@ -2,7 +2,7 @@
 
 set -euo pipefail
 
-oc_workflow="$OVERLAP_CHECKER/tests/demo_workflow.sh"
+oc_workflow="../overlap_checker_workflow.sh"
 
 mkdir -p workdir
 cd workdir

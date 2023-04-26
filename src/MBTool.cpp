@@ -45,7 +45,6 @@ MBTool::MBTool() {
   for (int i = 0; i < 5; i++) {
     entity_id[i] = 0;
   }
-  degenerate_triangle_count = 0;
 
   try {
     mbi = new moab::Core();
@@ -243,11 +242,6 @@ void MBTool::add_entity(moab::EntityHandle meshset, moab::EntityHandle entity) {
 // write the geometry
 void MBTool::write_geometry(const std::string &filename) {
   CHECK_MOAB_RVAL(mbi->write_file(filename.c_str()));
-
-  if (degenerate_triangle_count > 0) {
-    std::cout << "Warning: " << degenerate_triangle_count
-      << " degenerate triangles have been ignored." << std::endl;
-  }
 }
 
 entity_vector MBTool::get_entities_by_dimension(

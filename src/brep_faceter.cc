@@ -67,9 +67,11 @@ private:
   void add_materials(std::string single_material, bool special_case,
                      std::vector<std::string> &mat_list);
 
-
 public:
-  BrepFaceter(MBTool &mbt) : mbtool(mbt), degenerate_triangle_count(0) {}
+  BrepFaceter(MBTool &mbt) :
+    mbtool(mbt),
+    degenerate_triangle_count(0),
+    surface_without_facet_count(0) {}
 
   void facet_all_volumes(const TopTools_HSequenceOfShape &shape_list,
                       const FacetingTolerance& facet_tol,
@@ -87,6 +89,7 @@ private:
   entity_vector volumesList;
 
   int degenerate_triangle_count;
+  int surface_without_facet_count;
 
   void create_surfaces(const TopTools_HSequenceOfShape &shape_list);
   void perform_faceting(const FacetingTolerance& facet_tol);
@@ -169,14 +172,14 @@ private:
       }
   }
 
-  // returns true if surface has facets
-  bool populate_surface(moab::EntityHandle surface, const TopoDS_Face &face) {
+  void populate_surface(moab::EntityHandle surface, const TopoDS_Face &face) {
     // get the triangulation for the current face
     TopLoc_Location location;
     Handle(Poly_Triangulation) triangulation = BRep_Tool::Triangulation(face, location);
 
     if (triangulation.IsNull() || triangulation->NbNodes() < 1) {
-      return false;
+      surface_without_facet_count += 1;
+      return;
     }
 
     // add contents to surface
@@ -200,7 +203,6 @@ private:
       int sense = currentEdge.Orientation() != face.Orientation() ? moab::SENSE_REVERSE : moab::SENSE_FORWARD;
       mbtool.add_child_to_parent(curve, surface, sense);
     }
-    return true;
   }
 
   void populate_volume(moab::EntityHandle vol, const TopoDS_Shape &shape) {
@@ -283,16 +285,11 @@ void BrepFaceter::populate_all_surfaces() {
   // Note: surface meshsets have actually been created early, but they are
   // populated here, and edge and vertex meshsets are created here.
 
-  int n_surfaces_without_facets = 0;
   for (MapFaceToSurface::Iterator it(surfaceMap); it.More(); it.Next()) {
     const TopoDS_Face &face = it.Key();
     moab::EntityHandle surface = it.Value();
 
-    bool hasFacets = populate_surface(surface, face);
-    if (!hasFacets) {
-      n_surfaces_without_facets++;
-      continue;
-    }
+    populate_surface(surface, face);
   }
 
   // Instead of outputting "No facets for surface" or "degenerate triangle
@@ -300,8 +297,8 @@ void BrepFaceter::populate_all_surfaces() {
   // a single warning message saying how many time the issue has occured
   // (following an issue with many lines of unhelpful output when processing
   // one example geometry).
-  if (n_surfaces_without_facets > 0) {
-    std::cerr << "Warning: " << n_surfaces_without_facets
+  if (surface_without_facet_count > 0) {
+    std::cerr << "Warning: " << surface_without_facet_count
       << " surfaces found without facets." << std::endl;
   }
 

@@ -29,7 +29,8 @@ TEST_CASE("Faceting cylinder and writing to MOAB", "[cylinder_faceting]") {
   std::vector<std::string> materials_list;
   materials_list.push_back("testmat");
 
-  sew_and_facet2(shape, facet_tol, mbtool, materials_list);
+  entity_vector volumes = sew_and_facet2(shape, facet_tol, mbtool);
+  add_materials(mbtool, volumes, materials_list);
 
   std::vector<moab::EntityHandle> triangles = mbtool.get_entities_by_dimension(0, 2, true);
 

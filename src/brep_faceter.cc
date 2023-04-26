@@ -57,29 +57,16 @@ typedef NCollection_IndexedDataMap<TopoDS_Face, moab::EntityHandle, TopTools_Sha
 typedef NCollection_IndexedDataMap<TopoDS_Edge, moab::EntityHandle, TopTools_ShapeMapHasher> MapEdgeToCurve;
 typedef NCollection_IndexedDataMap<TopoDS_Vertex, moab::EntityHandle, TopTools_ShapeMapHasher> MapVertexToMeshset;
 
-
 class BrepFaceter
 {
-private:
-  void facet(const TopTools_HSequenceOfShape &shape_list,
-             const FacetingTolerance& facet_tol);
-
-  void add_materials(std::string single_material, bool special_case,
-                     std::vector<std::string> &mat_list);
-
 public:
   BrepFaceter(MBTool &mbt) :
     mbtool(mbt),
     degenerate_triangle_count(0),
     surface_without_facet_count(0) {}
 
-  void facet_all_volumes(const TopTools_HSequenceOfShape &shape_list,
-                      const FacetingTolerance& facet_tol,
-                      std::string single_material, bool special_case,
-                      std::vector<std::string> &mat_list) {
-    facet(shape_list, facet_tol);
-    add_materials(single_material, special_case, mat_list);
-  }
+  entity_vector facet(const TopTools_HSequenceOfShape &shape_list,
+                      const FacetingTolerance& facet_tol);
 
 private:
   MBTool &mbtool;
@@ -317,7 +304,7 @@ void BrepFaceter::create_volumes_and_add_children(const TopTools_HSequenceOfShap
   }
 }
 
-void BrepFaceter::facet(const TopTools_HSequenceOfShape &shape_list,
+entity_vector BrepFaceter::facet(const TopTools_HSequenceOfShape &shape_list,
                         const FacetingTolerance& facet_tol) {
   // build surfaceMap (with early creations of surface meshsets) so we have a
   // set of unique faces for faceting
@@ -330,49 +317,50 @@ void BrepFaceter::facet(const TopTools_HSequenceOfShape &shape_list,
   // no contents (they do have children) and their children have already been
   // created and populated.
   create_volumes_and_add_children(shape_list);
+
+  return volumesList;
 }
 
-void BrepFaceter::add_materials(std::string single_material, bool special_case,
-                    std::vector<std::string> &mat_list) {
+static std::string add_mat_prefix(const std::string &material) {
+  // add "mat:"" prefix, unless it's already there
+  if (!material.empty() && material.rfind("mat:", 0) != 0) {
+    return "mat:" + material;
+  }
+  return material;
+}
+
+void add_materials(MBTool &mbtool, const entity_vector &volumes,
+                    const std::vector<std::string> &mat_list) {
   // build a list of volumes for each material
   std::map<std::string, entity_vector> material_volumes;
+
+  if (mat_list.size() < volumes.size()) {
+    std::cerr << "Error: Material list is too short." << std::endl;
+    return;
+  }
 
   // keep track of where we are in the material list
   auto next_material = mat_list.begin();
 
   // update map from material name to volumes
-  for (moab::EntityHandle vol : volumesList) {
-    // if single_material is set, then ignore materials list
-    if (!single_material.empty()) {
-      material_volumes[single_material].push_back(vol);
-    } else if (next_material != mat_list.end()) {
-      const std::string &material = *(next_material++);
-      material_volumes[material].push_back(vol);
-    }
-  }
-
-  if (special_case) {
-    // temporary hack to get the test to pass (with early return)
-    mbtool.add_group("dummy_mat", {});
-    return;
+  for (moab::EntityHandle vol : volumes) {
+    const std::string &material = *(next_material++);
+    material_volumes[material].push_back(vol);
   }
 
   // create material groups
   for (auto &pair : material_volumes) {
-    std::string material = pair.first;
-
-    // add "mat:"" prefix, unless it's already there
-    if (!material.empty() && material.rfind("mat:", 0) != 0) {
-      material = "mat:" + material;
-    }
-
-    mbtool.add_group(material, pair.second);
+    mbtool.add_group(add_mat_prefix(pair.first), pair.second);
   }
 }
 
-void sew_and_facet2(TopoDS_Shape &shape, const FacetingTolerance& facet_tol, MBTool &mbtool,
-                    std::vector<std::string> &mat_list, std::string single_material,
-                    bool special_case) {
+
+void add_single_material(MBTool &mbtool, const entity_vector &volumes,
+                         const std::string &single_material) {
+  mbtool.add_group(add_mat_prefix(single_material), volumes);
+}
+
+entity_vector sew_and_facet2(TopoDS_Shape &shape, const FacetingTolerance& facet_tol, MBTool &mbtool) {
   TopTools_HSequenceOfShape shape_list;
   for (TopExp_Explorer solids(shape, TopAbs_SOLID); solids.More(); solids.Next()) {
     // sew together all the curves
@@ -385,19 +373,14 @@ void sew_and_facet2(TopoDS_Shape &shape, const FacetingTolerance& facet_tol, MBT
   }
   std::cout << "Instanciated " << shape_list.Length() << " items from file" << std::endl;
 
-  if (mat_list.size() < shape_list.Length()) {
-    std::cerr << "Error: Material list is too short." << std::endl;
-    return;
-  }
-
   BrepFaceter bf(mbtool);
-  bf.facet_all_volumes(shape_list, facet_tol, single_material, special_case, mat_list);
+  return bf.facet(shape_list, facet_tol);
 }
 
 void read_materials_list(std::string text_file, std::vector<std::string> &mat_list) {
   std::ifstream text_stream(text_file);
   if (text_stream.fail()) {
-    std::cerr << "Warning: Failed to read file " + text_file << std::endl;
+    std::cerr << "Warning: Failed to read file " << text_file << std::endl;
   } else {
     std::string line;
     while (std::getline(text_stream, line)) {
@@ -420,7 +403,8 @@ void brep_faceter(std::string brep_file, std::string materials_list_file,
   // TODO: review use of GEOMETRY_RESABS
   mbtool.set_faceting_tol_tag(facet_tol.tolerance);
   mbtool.set_scale_factor(scale_factor);
-  sew_and_facet2(shape, facet_tol, mbtool, materials_list);
+  entity_vector volumes = sew_and_facet2(shape, facet_tol, mbtool);
+  add_materials(mbtool, volumes, materials_list);
 
   if (add_mat_ids)
     mbtool.add_mat_ids();

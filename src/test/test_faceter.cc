@@ -29,8 +29,8 @@ TEST_CASE("Faceting BREP and writing to MOAB", "[faceter]") {
 
   // Temporarily ignoring the materials map, and creating an empty material
   // group - TODO: Fix materials in comparison Cubit output, and undo this hack
-  bool temporary_hack = true;
-  sew_and_facet2(shape, facet_tol, mbtool, materials_list, "", temporary_hack);
+  sew_and_facet2(shape, facet_tol, mbtool);
+  mbtool.add_group("dummy_grp", {});
 
   std::vector<moab::EntityHandle> triangles = mbtool.get_entities_by_dimension(0, 2, true);
   CHECK(triangles.size() == 22);

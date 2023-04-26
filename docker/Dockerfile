@@ -1,5 +1,20 @@
+FROM ubuntu:latest AS ubuntu_with_occ
+
+# install runtime packages (OCCT pulls in all sorts of crap)
+RUN apt-get update \
+ && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+      ca-certificates \
+      libhdf5-103-1 \
+      liblapack3 \
+      libocct-data-exchange-7.5 \
+      libocct-draw-7.5 \
+      libocct-foundation-7.5 \
+      libocct-modeling-data-7.5 \
+      libtbb12 \
+ && rm -rf /var/lib/apt/lists/*
+
 # build code in larger inner image containing compilers and -dev packages
-FROM ubuntu:latest AS inner
+FROM ubuntu_with_occ AS inner
 
 ENV DEBIAN_FRONTEND=noninteractive
 
@@ -71,20 +86,7 @@ RUN mkdir /build && cd /build \
  && rm -Rf /build
 
 # resulting image
-FROM ubuntu:latest
-
-# install runtime packages (OCCT pulls in all sorts of crap)
-RUN apt-get update \
- && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
-      ca-certificates \
-      libhdf5-103-1 \
-      liblapack3 \
-      libocct-data-exchange-7.5 \
-      libocct-draw-7.5 \
-      libocct-foundation-7.5 \
-      libocct-modeling-data-7.5 \
-      libtbb12 \
- && rm -rf /var/lib/apt/lists/*
+FROM ubuntu_with_occ
 
 # copy binaries that was built above
 COPY --from=inner /usr/local/ /usr/local/

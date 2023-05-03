@@ -1,6 +1,6 @@
 FROM ubuntu:latest AS ubuntu_with_occ
 
-# install runtime packages (OCCT pulls in all sorts of crap)
+# install runtime packages (OCCT pulls in a lot of dependencies)
 RUN apt-get update \
  && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
       ca-certificates \
@@ -88,7 +88,7 @@ RUN mkdir /build && cd /build \
 # resulting image
 FROM ubuntu_with_occ
 
-# copy binaries that was built above
+# copy binaries that were built above
 COPY --from=inner /usr/local/ /usr/local/
 
 # also copy source over

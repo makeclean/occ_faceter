@@ -1,4 +1,4 @@
-# useful commands
+# useful docker commands
 
 (build commands are to be run from this directory)
 

@@ -1,3 +1,5 @@
+# Dockerfile for overlap_checker and occ_faceter
+
 FROM ubuntu:latest AS ubuntu_with_occ
 
 # install runtime packages (OCCT pulls in a lot of dependencies)

@@ -11,6 +11,13 @@ const char geom_categories[][CATEGORY_TAG_SIZE] = {"Vertex\0",
 						   "Volume\0",
 						   "Group\0"};
 
+class mberror : public std::runtime_error {
+public:
+  mberror(moab::ErrorCode error_code, const std::string & what)
+    : error_code(error_code), std::runtime_error(what) {}
+
+  moab::ErrorCode error_code;
+};
 
 // throw an mberror with message formatted to include filename, linenumber, and failing expression
 static __attribute__((noreturn)) void

@@ -47,6 +47,27 @@ make test
 make install
 ```
 
+
+### Docker image
+
+To build a docker image with overlap_checker and occ_faceter installed (using the Dockerfile in this directory), run:
+
+```shell
+docker build --pull --tag=occ_facet_geom .
+```
+
+Then to use the image, with data in the current directory appearing in /data:
+```shell
+docker run -v "$PWD:/data" -it occ_facet_geom
+```
+
+For development, use instead:
+
+```shell
+docker build --tag=inner --target inner .
+```
+
+
 ### Usage
 
 After installation the bin directory should contain occ_faceter and other tools. To use occ_faceter you will need a CAD geometry,

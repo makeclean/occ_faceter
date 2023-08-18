@@ -36,7 +36,7 @@ raise_moab_error(moab::ErrorCode rval, const char *file, const int line, const c
   throw mberror(rval, err.str());
 }
 
-// helper to throw an exception fron a moab::ErrorCode
+// helper to throw an exception from a moab::ErrorCode
 #define CHECK_MOAB_RVAL(expr)                                                        \
   do {                                                                               \
     moab::ErrorCode rval = (expr);                                                   \

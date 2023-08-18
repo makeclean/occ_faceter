@@ -57,16 +57,14 @@ typedef NCollection_IndexedDataMap<TopoDS_Face, moab::EntityHandle, TopTools_Sha
 typedef NCollection_IndexedDataMap<TopoDS_Edge, moab::EntityHandle, TopTools_ShapeMapHasher> MapEdgeToCurve;
 typedef NCollection_IndexedDataMap<TopoDS_Vertex, moab::EntityHandle, TopTools_ShapeMapHasher> MapVertexToMeshset;
 
-class BrepFaceter
-{
+class BrepFaceter {
 public:
-  BrepFaceter(MBTool &mbt) :
-    mbtool(mbt),
-    degenerate_triangle_count(0),
-    surface_without_facet_count(0) {}
+  BrepFaceter(MBTool &mbt) : mbtool(mbt),
+                             degenerate_triangle_count(0),
+                             surface_without_facet_count(0) {}
 
   entity_vector facet(const TopTools_HSequenceOfShape &shape_list,
-                      const FacetingTolerance& facet_tol);
+                      const FacetingTolerance &facet_tol);
 
 private:
   MBTool &mbtool;
@@ -79,7 +77,7 @@ private:
   int surface_without_facet_count;
 
   void create_surfaces(const TopTools_HSequenceOfShape &shape_list);
-  void perform_faceting(const FacetingTolerance& facet_tol);
+  void perform_faceting(const FacetingTolerance &facet_tol);
   void populate_all_surfaces();
   void create_volumes_and_add_children(const TopTools_HSequenceOfShape &shape_list);
 
@@ -100,63 +98,63 @@ private:
                       const Handle(Poly_Triangulation) &triangulation,
                       const TopLoc_Location &location,
                       const entity_vector &surfaceNodes) {
-      // get the faceting for the edge
-      Handle(Poly_PolygonOnTriangulation) edges =
-          BRep_Tool::PolygonOnTriangulation(currentEdge, triangulation, location);
+    // get the faceting for the edge
+    Handle(Poly_PolygonOnTriangulation) edges =
+        BRep_Tool::PolygonOnTriangulation(currentEdge, triangulation, location);
 
-      if (edges.IsNull()) {
-        std::cerr << "Warning: Unexpected null edges." << std::endl;
-        return;
+    if (edges.IsNull()) {
+      std::cerr << "Warning: Unexpected null edges." << std::endl;
+      return;
+    }
+
+    const TColStd_Array1OfInteger &lines = edges->Nodes();
+    if (lines.Length() < 2) {
+      std::cerr << "Warning: Attempting to build empty curve." << std::endl;
+      return;
+    }
+
+    entity_vector mbedge_entities;
+    entity_vector node_entities;
+
+    auto occ_edge_it = lines.cbegin();
+
+    // subtract one because OCC uses one based indexing
+    moab::EntityHandle prev = surfaceNodes.at(*occ_edge_it - 1);
+    node_entities.push_back(prev);
+    occ_edge_it++;
+
+    for (; occ_edge_it != lines.cend(); occ_edge_it++) {
+      moab::EntityHandle node = surfaceNodes.at(*occ_edge_it - 1);
+      moab::EntityHandle edge = mbtool.create_edge({prev, node});
+
+      node_entities.push_back(node);
+      mbedge_entities.push_back(edge);
+      prev = node;
+    }
+
+    // if curve is closed, remove duplicate vertex
+    if (node_entities.front() == node_entities.back()) {
+      node_entities.pop_back();
+    }
+
+    // add nodes and mbedges to curve
+    mbtool.add_entities(curve, node_entities);
+    mbtool.add_entities(curve, mbedge_entities);
+
+    // create and populate children
+    for (TopExp_Explorer explorer(currentEdge, TopAbs_VERTEX); explorer.More(); explorer.Next()) {
+      const TopoDS_Vertex &currentVertex = TopoDS::Vertex(explorer.Current());
+
+      moab::EntityHandle meshset;
+      if (!vertexMap.FindFromKey(currentVertex, meshset)) {
+        meshset = mbtool.make_new_vertex();
+        vertexMap.Add(currentVertex, meshset);
+
+        populate_vertex(meshset, currentVertex);
       }
 
-      const TColStd_Array1OfInteger &lines = edges->Nodes();
-      if (lines.Length() < 2) {
-        std::cerr << "Warning: Attempting to build empty curve." << std::endl;
-        return;
-      }
-
-      entity_vector mbedge_entities;
-      entity_vector node_entities;
-
-      auto occ_edge_it = lines.cbegin();
-
-      // subtract one because OCC uses one based indexing
-      moab::EntityHandle prev = surfaceNodes.at(*occ_edge_it - 1);
-      node_entities.push_back(prev);
-      occ_edge_it++;
-
-      for (; occ_edge_it != lines.cend(); occ_edge_it++) {
-        moab::EntityHandle node = surfaceNodes.at(*occ_edge_it - 1);
-        moab::EntityHandle edge = mbtool.create_edge({prev, node});
-
-        node_entities.push_back(node);
-        mbedge_entities.push_back(edge);
-        prev = node;
-      }
-
-      // if curve is closed, remove duplicate vertex
-      if (node_entities.front() == node_entities.back()) {
-        node_entities.pop_back();
-      }
-
-      // add nodes and mbedges to curve
-      mbtool.add_entities(curve, node_entities);
-      mbtool.add_entities(curve, mbedge_entities);
-
-      // create and populate children
-      for (TopExp_Explorer explorer(currentEdge, TopAbs_VERTEX); explorer.More(); explorer.Next()) {
-        const TopoDS_Vertex &currentVertex = TopoDS::Vertex(explorer.Current());
-
-        moab::EntityHandle meshset;
-        if (!vertexMap.FindFromKey(currentVertex, meshset)) {
-          meshset = mbtool.make_new_vertex();
-          vertexMap.Add(currentVertex, meshset);
-
-          populate_vertex(meshset, currentVertex);
-        }
-
-        mbtool.add_child_to_parent(meshset, curve);
-      }
+      mbtool.add_child_to_parent(meshset, curve);
+    }
   }
 
   void populate_surface(moab::EntityHandle surface, const TopoDS_Face &face) {
@@ -235,7 +233,7 @@ void BrepFaceter::create_surface_triangles(entity_vector &triangles,
                                            moab::EntityHandle surface,
                                            const Poly_Triangulation &triangulation,
                                            const entity_vector &nodes) {
-   //     std::cout << "Face has " << tris.Length() << " triangles" << std::endl;
+  //     std::cout << "Face has " << tris.Length() << " triangles" << std::endl;
   for (int i = 1; i <= triangulation.NbTriangles(); i++) {
     // get the node indexes for this triangle
     const Poly_Triangle &tri = triangulation.Triangle(i);
@@ -243,14 +241,14 @@ void BrepFaceter::create_surface_triangles(entity_vector &triangles,
     int a, b, c;
     tri.Get(a, b, c);
     // subtract one because OCC uses one based indexing
-    std::array<moab::EntityHandle,3> connections = {
-      nodes.at(a - 1),
-      nodes.at(b - 1),
-      nodes.at(c - 1),
+    std::array<moab::EntityHandle, 3> connections = {
+        nodes.at(a - 1),
+        nodes.at(b - 1),
+        nodes.at(c - 1),
     };
     if (connections[2] == connections[1] ||
         connections[1] == connections[0] ||
-        connections[2] == connections[0] ) {
+        connections[2] == connections[0]) {
       degenerate_triangle_count += 1;
     } else {
       triangles.push_back(mbtool.create_triangle(connections));
@@ -258,7 +256,7 @@ void BrepFaceter::create_surface_triangles(entity_vector &triangles,
   }
 }
 
-void BrepFaceter::perform_faceting(const FacetingTolerance& facet_tol) {
+void BrepFaceter::perform_faceting(const FacetingTolerance &facet_tol) {
 
 #pragma omp parallel for
   for (int i = 1; i <= surfaceMap.Extent(); i++) {
@@ -286,12 +284,12 @@ void BrepFaceter::populate_all_surfaces() {
   // one example geometry).
   if (surface_without_facet_count > 0) {
     std::cerr << "Warning: " << surface_without_facet_count
-      << " surfaces found without facets." << std::endl;
+              << " surfaces found without facets." << std::endl;
   }
 
   if (degenerate_triangle_count > 0) {
     std::cerr << "Warning: " << degenerate_triangle_count
-      << " degenerate triangles have been ignored." << std::endl;
+              << " degenerate triangles have been ignored." << std::endl;
   }
 }
 
@@ -305,7 +303,7 @@ void BrepFaceter::create_volumes_and_add_children(const TopTools_HSequenceOfShap
 }
 
 entity_vector BrepFaceter::facet(const TopTools_HSequenceOfShape &shape_list,
-                        const FacetingTolerance& facet_tol) {
+                                 const FacetingTolerance &facet_tol) {
   // build surfaceMap (with early creations of surface meshsets) so we have a
   // set of unique faces for faceting
   create_surfaces(shape_list);
@@ -330,7 +328,7 @@ static std::string add_mat_prefix(const std::string &material) {
 }
 
 void add_materials(MBTool &mbtool, const entity_vector &volumes,
-                    const std::vector<std::string> &mat_list) {
+                   const std::vector<std::string> &mat_list) {
   // build a list of volumes for each material
   std::map<std::string, entity_vector> material_volumes;
 
@@ -354,13 +352,12 @@ void add_materials(MBTool &mbtool, const entity_vector &volumes,
   }
 }
 
-
 void add_single_material(MBTool &mbtool, const entity_vector &volumes,
                          const std::string &single_material) {
   mbtool.add_group(add_mat_prefix(single_material), volumes);
 }
 
-entity_vector sew_and_facet2(TopoDS_Shape &shape, const FacetingTolerance& facet_tol, MBTool &mbtool) {
+entity_vector sew_and_facet2(TopoDS_Shape &shape, const FacetingTolerance &facet_tol, MBTool &mbtool) {
   TopTools_HSequenceOfShape shape_list;
   for (TopExp_Explorer solids(shape, TopAbs_SOLID); solids.More(); solids.Next()) {
     // sew together all the curves
@@ -384,13 +381,13 @@ void read_materials_list(std::string text_file, std::vector<std::string> &mat_li
   } else {
     std::string line;
     while (std::getline(text_stream, line)) {
-        mat_list.push_back(line);
+      mat_list.push_back(line);
     }
   }
 }
 
 void brep_faceter(std::string brep_file, std::string materials_list_file,
-                  const FacetingTolerance& facet_tol, std::string h5m_file,
+                  const FacetingTolerance &facet_tol, std::string h5m_file,
                   bool add_mat_ids, double scale_factor) {
   TopoDS_Shape shape;
   BRep_Builder builder;

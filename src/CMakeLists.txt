@@ -9,11 +9,11 @@ SET(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} ${GCC_OPENMP_COMPILE_FLAGS}")
 
 ADD_LIBRARY(mbtool MBTool.cpp)
 
-# occ faceter and step2breps
+# occ faceter
 LINK_DIRECTORIES("/usr/lib/x86_64-linux-gnu/")
 IF(OCE_FOUND OR OCC_FOUND )
   ADD_LIBRARY(brep_faceter brep_faceter.cc)
-  ADD_EXECUTABLE(occ_faceter occ_faceter.cc steps2h5m.cc step2breps.cc)
+  ADD_EXECUTABLE(occ_faceter occ_faceter.cc)
   SET(OCE_LINK_LIBS TKSTEP TKXSBase TKernel TKMath TKMesh TKTopAlgo TKBRep TKSTEPBase TKPrim)
   TARGET_LINK_LIBRARIES(brep_faceter mbtool ${MOAB_LIBRARIES} ${OCE_LINK_LIBS})
   TARGET_LINK_LIBRARIES(occ_faceter brep_faceter)

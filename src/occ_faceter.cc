@@ -1,6 +1,5 @@
 #include <iostream>
 #include "brep_faceter.hh"
-#include "steps2h5m.hh"
 #include "moab/ProgOptions.hpp"
 
 static bool has_ending(std::string s, std::string ending) {
@@ -19,7 +18,7 @@ int main(int argc, char *argv[]) {
   double scale_factor = 0.1;
 
   po.addRequiredArg<std::string>("input_file",
-                                 "Path to brep output from overlap_checker/merge_solids and a list of materials, or json list of step files and materials",
+                                 "Path to brep output from overlap_checker/merge_solids and a list of materials",
                                  &input_file);
 
   po.addOpt<double>("tolerance,t", "Faceting tolerance (default " + std::to_string(tolerance) + ")", &tolerance);
@@ -37,9 +36,7 @@ int main(int argc, char *argv[]) {
 
   FacetingTolerance facet_tol(tolerance, tol_is_absolute);
 
-  if (has_ending(input_file, ".json")) {
-    steps2h5m(input_file, facet_tol, output_file);
-  } else if (has_ending(input_file, ".brep")) {
+  if (has_ending(input_file, ".brep")) {
     // expecting a text file with similar path to the brep file,
     // but with ".brep" replaced by "_materials.txt"
     std::string txt_file = input_file.substr(0, input_file.length() - 5) + "_materials.txt";
@@ -51,7 +48,7 @@ int main(int argc, char *argv[]) {
 
     brep_faceter(input_file, txt_file, facet_tol, output_file, add_mat_ids, scale_factor);
   } else {
-    std::cerr << "Error: Path to input file must end with .json or .brep" << std::endl;
+    std::cerr << "Error: Path to input file must end with .brep" << std::endl;
     return 1;
   }
 

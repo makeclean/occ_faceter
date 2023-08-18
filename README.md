@@ -5,6 +5,8 @@ OCC Faceter is a coolection of tools used for the production, modification and s
 
 ### Installation
 
+*See also the installation in [./Dockerfile](./Dockerfile).*
+
 OCC Faceter has a number of dependencies, including [CGAL](https://cgal.org/), [MOAB](https://press3.mcs.anl.gov/sigma/moab-library/) and [OCC](https://www.opencascade.com).
 
 To install MOAB and its dependencies:
@@ -27,8 +29,6 @@ cd ../..
 To install OCC:
 
 ```sh
-sudo apt install software-properties-common # for add-apt-repository
-sudo add-apt-repository ppa:freecad-maintainers/freecad-stable # for occ
 sudo apt install libocct*-dev occt*
 ```
 
@@ -66,6 +66,11 @@ For development, use instead:
 ```shell
 docker build --tag=inner --target inner .
 ```
+
+
+### Additional make_watertight tests
+
+There are tests under development which use [overlap_checker](https://github.com/ukaea/overlap_checker) tools to prepare test geometry, and then run the DAGMC make_watertight tool on the output of occ_faceter, with the expectation that make_watertight could highlight potential problems with occ_faceter's output.  See [prepare-test-geometries.sh](src/test/prepare-test-geometries.sh) and [test-with-make_watertight.sh](src/test/test-with-make_watertight.sh).
 
 
 ### Usage

@@ -1,27 +1,19 @@
+FIND_PACKAGE(CGAL REQUIRED COMPONENTS Core)
+
 # cgal includes
 INCLUDE_DIRECTORIES(${MOAB_INCLUDE_DIRS})
 INCLUDE_DIRECTORIES(${OPENCASCADE_INCLUDE_DIRS})
 INCLUDE_DIRECTORIES(${CGAL_INCLUDE_DIRS})
 INCLUDE_DIRECTORIES(.)
-INCLUDE_DIRECTORIES(catch)
+INCLUDE_DIRECTORIES(../src/catch)
+INCLUDE_DIRECTORIES(../src)
 
 SET(GCC_OPENMP_COMPILE_FLAGS "-fopenmp")
 SET(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} ${GCC_OPENMP_COMPILE_FLAGS}")
 
 ADD_LIBRARY(vertex_inserter vertex_inserter.cc)
 
-ADD_LIBRARY(mbtool MBTool.cpp)
-
-# occ faceter and step2breps
 LINK_DIRECTORIES("/usr/lib/x86_64-linux-gnu/")
-IF(OCE_FOUND OR OCC_FOUND )
-  ADD_LIBRARY(brep_faceter brep_faceter.cc)
-  ADD_EXECUTABLE(occ_faceter occ_faceter.cc steps2h5m.cc step2breps.cc)
-  SET(OCE_LINK_LIBS TKSTEP TKXSBase TKernel TKMath TKMesh TKTopAlgo TKBRep TKSTEPBase TKPrim)
-  TARGET_LINK_LIBRARIES(brep_faceter mbtool vertex_inserter ${MOAB_LIBRARIES} ${OCE_LINK_LIBS})
-  TARGET_LINK_LIBRARIES(occ_faceter brep_faceter)
-  INSTALL(TARGETS occ_faceter DESTINATION bin)
-ENDIF(OCE_FOUND OR OCC_FOUND )
 
 ADD_LIBRARY(dagmc_topology dagmc_topology.cc)
 # dagmc merger

@@ -41,6 +41,7 @@ cd occ_faceter
 mkdir build
 cd build
 export LD_LIBRARY_PATH=/opt/moab/lib
+# build occ_faceter (to also build other tools, add -DBUILD_ALL_TOOLS=1)
 cmake .. -DCMAKE_INSTALL_PREFIX=..
 make -j4
 make test

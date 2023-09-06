@@ -1,7 +1,9 @@
 
-ADD_EXECUTABLE(vertex_insert_test test_vertex_inserter.cc)
-TARGET_LINK_LIBRARIES(vertex_insert_test vertex_inserter ${MOAB_LIBRARIES})
-ADD_TEST(NAME vertex_insert_test COMMAND vertex_insert_test)
+IF(BUILD_ALL_TOOLS)
+  ADD_EXECUTABLE(vertex_insert_test test_vertex_inserter.cc)
+  TARGET_LINK_LIBRARIES(vertex_insert_test vertex_inserter ${MOAB_LIBRARIES})
+  ADD_TEST(NAME vertex_insert_test COMMAND vertex_insert_test)
+ENDIF(BUILD_ALL_TOOLS)
 
 ADD_EXECUTABLE(faceter_test test_faceter.cc)
 TARGET_LINK_LIBRARIES(faceter_test brep_faceter)

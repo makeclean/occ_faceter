@@ -1,7 +1,6 @@
 #define CATCH_CONFIG_MAIN
 #include "catch.hpp"
 #include "brep_faceter.hh"
-#include "read_metadata.hh"
 #include "BRep_Builder.hxx"
 #include "BRepTools.hxx"
 #include "moab/GeomQueryTool.hpp"
@@ -9,13 +8,13 @@
 
 TEST_CASE("Faceting BREP and writing to MOAB", "[faceter]") {
 
-  MBTool mbtool;
-  mbtool.set_tags();
-
   FacetingTolerance facet_tol(1.e-3);
 
+  MBTool mbtool;
+  mbtool.set_faceting_tol_tag(facet_tol.tolerance);
+
   const char *input_path = "gluedCompSolid.brep";
-  const char *metadata_path = "gluedCompSolid_metadata.json";
+  const char *materials_path = "gluedCompSolid_materials.txt";
   const char *output_path = "test_output.h5m";
 
   TopoDS_Shape shape;
@@ -25,23 +24,24 @@ TEST_CASE("Faceting BREP and writing to MOAB", "[faceter]") {
 
   REQUIRE(!shape.IsNull());
 
-  MaterialsMap materials_map;
-  read_metadata(metadata_path, materials_map);
+  std::vector<std::string> materials_list;
+  read_materials_list(materials_path, materials_list);
 
-  sew_and_facet(shape, facet_tol, mbtool, materials_map);
+  // Temporarily ignoring the materials map, and creating an empty material
+  // group - TODO: Fix materials in comparison Cubit output, and undo this hack
+  sew_and_facet2(shape, facet_tol, mbtool);
+  mbtool.add_group("dummy_grp", {});
 
-  std::vector<moab::EntityHandle> triangles;
-  moab::ErrorCode ret = mbtool.get_entities_by_dimension(0, 2, triangles, true);
+  std::vector<moab::EntityHandle> triangles = mbtool.get_entities_by_dimension(0, 2, true);
+  CHECK(triangles.size() == 22);
 
-  REQUIRE(ret == moab::MB_SUCCESS);
-  REQUIRE(triangles.size() == 22);
-
+  mbtool.gather_ents();
   mbtool.write_geometry(output_path);
 
   // pt_in_vol and ray_file tests
 
   moab::Core mbi;
-  ret = mbi.load_file(output_path);
+  moab::ErrorCode ret = mbi.load_file(output_path);
   REQUIRE(ret == moab::MB_SUCCESS);
 
   moab::GeomTopoTool gtt(&mbi);
@@ -57,17 +57,17 @@ TEST_CASE("Faceting BREP and writing to MOAB", "[faceter]") {
   double xyz[3] = {1.0, 1.0, 1.0};
   ret = gqt.point_in_volume(vol1, xyz, result);
   REQUIRE(ret == moab::MB_SUCCESS);
-  REQUIRE(result == 1);
+  CHECK(result == 1);
 
   ret = gqt.point_in_volume(vol2, xyz, result);
   REQUIRE(ret == moab::MB_SUCCESS);
-  REQUIRE(result == 0);
+  CHECK(result == 0);
 
   xyz[0] = 11;
   result = 0;
   ret = gqt.point_in_volume(vol2, xyz, result);
   REQUIRE(ret == moab::MB_SUCCESS);
-  REQUIRE(result == 1);
+  CHECK(result == 1);
 
   double start[3] = {1.0, 1.0, 1.0};
   double next_surf_dist;
@@ -75,5 +75,5 @@ TEST_CASE("Faceting BREP and writing to MOAB", "[faceter]") {
   double dir[3] = {-1.0, 0.0, 0.0};
   ret = gqt.ray_fire(vol1, start, dir, next_surf, next_surf_dist);
   REQUIRE(ret == moab::MB_SUCCESS);
-  REQUIRE(next_surf_dist == 1.0);
+  CHECK(next_surf_dist == 1.0);
 }

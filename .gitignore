@@ -2,6 +2,8 @@
 #*
 *~
 *.stl
-*.txt
 *.stp
 *.h5m
+
+build/
+.cache/

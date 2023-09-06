@@ -1,73 +1,62 @@
 #ifndef MBTOOL_HPP
 #define MBTOOL_HPP
 
+#include <array>
+#include <map>
+#include <vector>
+
 #include "moab/Core.hpp"
 #include "MBTagConventions.hpp"
-
-#include <vector>
-#include <array>
-
-#include "rtree/RTree.h"
-#include "vertex_inserter.hh"
+#include "xyz_to_entity_map.hh"
 
 namespace moab {
 class GeomTopoTool;
 }
 
-// convenient return for facets
-struct facet_data {
-  std::vector<std::array<double,3> > coords;
-  std::vector<std::array<int, 3> > connectivity;
-};
-
-struct edge_data {
-  std::vector<int> connectivity;
-};
+typedef std::vector<moab::EntityHandle> entity_vector;
 
 class MBTool {
 public:
   MBTool();
   ~MBTool();
 
-  moab::ErrorCode set_tags();
-  moab::ErrorCode make_new_volume(moab::EntityHandle &volume);
-  moab::ErrorCode add_surface(moab::EntityHandle volume,
-			      facet_data facetData);
-  moab::ErrorCode add_surface(moab::EntityHandle volume,
-			      facet_data facetData,
-			      std::vector<edge_data> edgeData);
-  void write_geometry(std::string filename);
+  void set_scale_factor(double scale_factor);
+  void set_faceting_tol_tag(double faceting_tol);
+  void set_geometry_tol_tag(double geom_tol);
+  moab::EntityHandle make_new_volume();
+  moab::EntityHandle make_new_surface();
+  moab::EntityHandle make_new_curve();
+  moab::EntityHandle make_new_vertex();
 
-  void summarise();
-  
-  moab::ErrorCode make_new_surface(moab::EntityHandle &surface);
-  moab::ErrorCode add_facets_and_curves_to_surface(moab::EntityHandle,
-						    facet_data facetData,
-						    std::vector<edge_data> edge_data);
-  moab::ErrorCode add_surface_to_volume(moab::EntityHandle surface,
-          moab::EntityHandle volume, int sense);
-  moab::ErrorCode add_group(const std::string &name,
-                            const std::vector<moab::EntityHandle> &entities);
-  moab::ErrorCode add_mat_ids();
+  void write_geometry(const std::string &filename);
 
-  moab::ErrorCode get_entities_by_dimension(const moab::EntityHandle meshset,
-                                            const int dimension,
-                                            std::vector<moab::EntityHandle> &entities,
-                                            const bool recursive) const;
+  moab::EntityHandle find_or_create_node(std::array<double, 3> point);
+  moab::EntityHandle create_triangle(std::array<moab::EntityHandle, 3> verticies);
+  moab::EntityHandle create_edge(std::array<moab::EntityHandle, 2> verticies);
+  void add_entities(moab::EntityHandle meshset, const entity_vector &entities);
+  void add_entity(moab::EntityHandle meshset, moab::EntityHandle entity);
+
+  void add_child_to_parent(moab::EntityHandle child,
+                           moab::EntityHandle parent, int sense);
+  void add_child_to_parent(moab::EntityHandle child,
+                           moab::EntityHandle parent);
+  void add_group(const std::string &name, const entity_vector &entities);
+  void add_mat_ids();
+
+  entity_vector get_entities_by_dimension(
+      const moab::EntityHandle meshset, const int dimension,
+      const bool recursive) const;
+  size_t get_number_of_meshsets();
+  void gather_ents();
+
 private:
-  moab::ErrorCode check_vertex_exists(std::array<double,3> coord, moab::EntityHandle &tVertex);
-  moab::ErrorCode make_new_curve(moab::EntityHandle &curve);
-  moab::ErrorCode add_facets_to_surface(moab::EntityHandle,
-					facet_data facetData);
-  private:
+  moab::EntityHandle create_entity_set(int dim);
+
   moab::Core *mbi;
-  VertexInserter::VertexInserter *vi;
+  coordinates_to_entity_map verticies;
+
   moab::GeomTopoTool *geom_tool;
-  int groupID;
-  int volID;
-  int surfID;
-  int curveID;
-  int degenerate_triangle_count;
+  int entity_id[5]; // group, volume, surface, curve IDs (indexed by dim)
   moab::EntityHandle rootset;
   moab::Tag geometry_dimension_tag, id_tag;
   moab::Tag faceting_tol_tag, geometry_resabs_tag;
@@ -75,6 +64,6 @@ private:
   moab::Tag vol_id_tag, surf_id_tag; // tags for triangles for plotting
   moab::Tag name_tag;
   moab::Tag mat_id_tag;
-  moab::Range existing_vertices;
+  double scale_factor;
 };
 #endif // MBTOOL_HPP

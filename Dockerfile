@@ -51,7 +51,7 @@ RUN git clone --depth=1 --recurse-submodules --shallow-submodules https://github
 
 RUN git clone --depth=1 --recurse-submodules --shallow-submodules https://github.com/ukaea/overlap_checker /overlap_checker
 
-RUN git clone --depth=1 --branch=new-materials https://github.com/johnnonweiler/occ_faceter /occ_faceter
+RUN git clone --depth=1 https://github.com/makeclean/occ_faceter /occ_faceter
 
 # build and install MOAB
 RUN mkdir /build && cd /build \

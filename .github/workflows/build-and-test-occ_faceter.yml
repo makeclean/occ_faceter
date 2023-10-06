@@ -1,0 +1,105 @@
+name: Build and test occ_faceter
+
+on:
+  push:
+    branches:
+      - 'main'
+  pull_request:
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: apt install
+        env:
+          DEBIAN_FRONTEND: noninteractive
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+          ca-certificates \
+          libhdf5-103-1 \
+          liblapack3 \
+          libocct-data-exchange-7.5 \
+          libocct-draw-7.5 \
+          libocct-foundation-7.5 \
+          libocct-modeling-data-7.5 \
+          libtbb12 \
+          automake autoconf libtool \
+          build-essential \
+          cmake \
+          gfortran \
+          git ca-certificates \
+          libcgal-dev \
+          libeigen3-dev \
+          libhdf5-dev \
+          liblapack-dev \
+          libocct-data-exchange-dev \
+          libocct-draw-dev \
+          libocct-foundation-dev \
+          libocct-modeling-data-dev \
+          libtbb-dev \
+          occt-misc \
+          python3 \
+          tzdata
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          path: occ_faceter
+      - name: Checkout DAGMC
+        uses: actions/checkout@v4
+        with:
+          repository: svalinn/DAGMC
+          path: DAGMC
+          submodules: recursive
+      - name: Checkout overlap_checker
+        uses: actions/checkout@v4
+        with:
+          repository: ukaea/overlap_checker
+          path: overlap_checker
+          submodules: recursive
+      - name: Checkout moab
+        run: git clone --depth=1 https://bitbucket.org/fathomteam/moab.git moab
+      - name: Build and install MOAB
+        run: |
+          pwd
+          cd moab
+          autoreconf -fi
+          mkdir build && cd build
+          ../configure \
+              --enable-optimize \
+              --disable-static \
+              --enable-shared \
+              --with-hdf5=/usr/lib/x86_64-linux-gnu/hdf5/serial \
+              --prefix=/usr/local
+          make -j2
+          sudo make install
+      - name: Build and install DAGMC
+        run: |
+          pwd
+          cd DAGMC
+          mkdir build && cd build
+          cmake .. -DMOAB_DIR=/usr/local -DCMAKE_INSTALL_PREFIX=/usr/local
+          make -j2 all test
+          sudo make install
+      - name: Build and install overlap_checker
+        run: |
+          cd overlap_checker
+          mkdir build && cd build
+          cmake .. -DCMAKE_INSTALL_PREFIX=/usr/local
+          make -j2
+          sudo make install
+      - name: Build and install occ_faceter
+        run: |
+          cd occ_faceter
+          mkdir build && cd build
+          cmake .. -DCMAKE_BUILD_TYPE=Release -DMOAB_ROOT=/usr/local -DCMAKE_INSTALL_PREFIX=/usr/local
+          make -j2
+          sudo make install
+      - name: Install h5py
+        run: pip install h5py
+      - name: Run tests
+        env:
+          LD_LIBRARY_PATH: /usr/local/lib
+        run: |
+          cd occ_faceter/build
+          ctest --output-on-failure

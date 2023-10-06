@@ -2,9 +2,11 @@
 
 FROM ubuntu:latest AS ubuntu_with_occ
 
+ARG DEBIAN_FRONTEND=noninteractive
+
 # install runtime packages (OCCT pulls in a lot of dependencies)
 RUN apt-get update \
- && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+ && apt-get install -y --no-install-recommends \
       ca-certificates \
       libhdf5-103-1 \
       liblapack3 \
@@ -17,8 +19,6 @@ RUN apt-get update \
 
 # build code in larger inner image containing compilers and -dev packages
 FROM ubuntu_with_occ AS inner
-
-ENV DEBIAN_FRONTEND=noninteractive
 
 # get system packages installed
 RUN apt-get update \
@@ -51,7 +51,7 @@ RUN git clone --depth=1 --recurse-submodules --shallow-submodules https://github
 
 RUN git clone --depth=1 --recurse-submodules --shallow-submodules https://github.com/ukaea/overlap_checker /overlap_checker
 
-RUN git clone --depth=1 --branch=new-materials https://github.com/johnnonweiler/occ_faceter /occ_faceter
+RUN git clone --depth=1 https://github.com/makeclean/occ_faceter /occ_faceter
 
 # build and install MOAB
 RUN mkdir /build && cd /build \
@@ -96,3 +96,6 @@ COPY --from=inner /usr/local/ /usr/local/
 # also copy source over
 COPY --from=inner /occ_faceter/ /occ_faceter/
 COPY --from=inner /overlap_checker /overlap_checker/
+
+# set path to moab libraries
+ENV LD_LIBRARY_PATH=/usr/local/lib

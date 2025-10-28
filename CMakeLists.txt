@@ -3,7 +3,7 @@ ENABLE_TESTING()
 PROJECT(OCC_FACETER)
 
 # libcgal-dev on ubuntu 20.04 needs c++14
-set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # Allow use of find_package(HDF5), find_package(MOAB), etc.

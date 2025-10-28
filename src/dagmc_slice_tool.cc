@@ -87,15 +87,18 @@ int main(int argc, char* argv[]) {
   std::vector<Polylines> slices;
 
   double dir[3] = {0.,1.,0.};
+  // y slice
   slices = cgal->sliceGeometry(dir,slice_position[1]);
   writeSlice(slices, "slice1.txt");
   dir[1] = 0.;
   dir[2] = 1.0;
-  slices = cgal->sliceGeometry(dir,slice_position[0]);
+  // z slice
+  slices = cgal->sliceGeometry(dir,slice_position[2]);
   writeSlice(slices, "slice2.txt");
   dir[2] = 0.0;
   dir[0] = 1.0;
-  slices = cgal->sliceGeometry(dir,slice_position[2]);
+  // x slice
+  slices = cgal->sliceGeometry(dir,slice_position[0]);
   writeSlice(slices, "slice3.txt");
 
   return 0;

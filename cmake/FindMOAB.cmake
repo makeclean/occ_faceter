@@ -8,7 +8,7 @@
 #  MOAB_DEFINITIONS - Compiler switches required for using MOAB
 
 find_path(MOAB_CMAKE_CONFIG NAMES MOABConfig.cmake
-  HINTS ${MOAB_ROOT}
+  HINTS ${MOAB_PATH}
   PATHS ENV LD_LIBRARY_PATH DYLD_LIBRARY_PATH
   PATH_SUFFIXES lib Lib cmake cmake/MOAB lib/cmake/MOAB 
   NO_DEFAULT_PATH)

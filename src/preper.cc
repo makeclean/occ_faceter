@@ -236,7 +236,8 @@ class NewVolsMOAB {
     rval = MOAB->add_parent_child(volume_set,surface_set);
     // add the triangles to the surface set 
     rval = MOAB->add_entities(surface_set,surface); 
-  
+
+    return rval;
   }
 
   void write(std::string filename) {
@@ -697,12 +698,13 @@ int main(int argc, char* argv[]) {
   rval = make_new_volume(v2);
   rval = add_surface_to_volume(s2,v2,1);
 
-  rval = MBI->load_file("../../vol1.stl", &s1);
-
-  rval = MBI->load_file("../../vol2.stl", &s2);
+  char* filename1 = argv[1];
+  std::cout << filename1 << std::endl;
+  rval = MBI->load_file(filename1, &s1);
+  char* filename2 = argv[2];
+  std::cout << filename2 << std::endl;
+  rval = MBI->load_file(filename2, &s2);
   
-  std::cout << rval << std::endl;
-
   rval = MBI->write_file("intermediate.h5m");
 
   // make the cgal geometry

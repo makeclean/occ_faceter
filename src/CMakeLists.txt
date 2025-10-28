@@ -54,6 +54,10 @@ TARGET_LINK_LIBRARIES(preper vertex_inserter ${MOAB_LIBRARIES} ${CGAL_LIBRARY} b
 ADD_EXECUTABLE(dagmc_overlap preper.cc)
 TARGET_LINK_LIBRARIES(dagmc_overlap vertex_inserter ${MOAB_LIBRARIES} ${CGAL_LIBRARY} boost_system boost_program_options gmp mpfr)
 
+# mesh_utils
+ADD_LIBRARY(surface_mesh_utils surface_mesh_utils.cc)
+TARGET_LINK_LIBRARIES(surface_mesh_utils ${MOAB_LIBRARIES})
+
 INSTALL(TARGETS dagmc_slicer DESTINATION bin)
 INSTALL(TARGETS dagmc_merge DESTINATION bin)
 INSTALL(TARGETS dagmc_overlap DESTINATION bin)

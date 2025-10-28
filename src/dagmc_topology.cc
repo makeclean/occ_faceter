@@ -1,5 +1,6 @@
 #include "dagmc_topology.hpp"
-#include "boost/progress.hpp"
+#include "boost/timer/timer.hpp"
+#include "boost/timer/progress_display.hpp"
 #include "MBTagConventions.hpp"
 #include <iostream>
 
@@ -247,7 +248,7 @@ moab::ErrorCode DAGMCTopology::find_curve_pairs(const std::map<int,moab::Range> 
   moab::ErrorCode rval = moab::MB_FAILURE;
   // loop over each curve and compare
   
-  boost::progress_display show_progress(curve_list.size());
+  boost::timer::progress_display show_progress(curve_list.size());
   for ( moab::EntityHandle curve : curve_list ) {
     std::vector<merge_pairs_t> matches;
     // compare all the curves and generate a list 
@@ -328,7 +329,7 @@ moab::ErrorCode DAGMCTopology::compare_surface_curves(const moab::EntityHandle s
 						      std::vector<merge_pairs_t> &surface_pairs) {
   
   moab::ErrorCode rval = moab::MB_FAILURE;
-  boost::progress_display show_progress(surface_set.size());
+  boost::timer::progress_display show_progress(surface_set.size());
   for ( moab::EntityHandle comparison_surface : surface_set ) {
     if ( comparison_surface == surface ) break;
     bool same = false;

@@ -139,6 +139,7 @@ std::vector<Polylines> MOABInterface::sliceGeometry(double dir[3], double offset
   }
   return slices;
 }
+
 // slice through the whole geometry
 std::map<int,Polylines> MOABInterface::sliceGeometryByID(double dir[3], double offset) {
   std::map<int, Mesh>::iterator it;

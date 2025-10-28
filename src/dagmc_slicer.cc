@@ -53,13 +53,7 @@ moab::Range MOABInterface::getChildTriangles(int vol_id) {
     rval = MBI->get_entities_by_type(*it, moab::MBTRI, triangles);
     triangle_set.merge(triangles);
   }
-  std::cout << triangle_set.size() << std::endl;
-  /*
-  for ( moab::EntityHandle tri : triangle_set ) {
-    std::cout << tri << std::endl;
-  }
-  std::cout << " " << std::endl;
-  */
+
   return triangle_set;
 }
 

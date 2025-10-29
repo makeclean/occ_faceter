@@ -12,7 +12,7 @@ TEST_CASE("Test of surface utils for making manifolds", "[surf_utils]") {
   REQUIRE(rval == moab::MB_SUCCESS);
 
   // make a surf_utils instance
-  std::shared_ptr<surf_utils> meshUtils = std::make_shared<surf_utils>(mbi);
-  //
+  std::shared_ptr<surf_utils> meshUtils = std::make_shared<surf_utils>(mbi,true);
+  // 
   meshUtils->make_manifolds(); 
 }

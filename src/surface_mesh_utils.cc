@@ -4,7 +4,8 @@
 // constructor
 surf_utils::surf_utils(std::shared_ptr<moab::Core> MBI, bool with_tagging) {
   moab = MBI;
-  tag_data = with_tagging
+  tag_data = with_tagging;
+  num_manifolds = 0;
 }
 
 // destructor
@@ -105,11 +106,21 @@ ehSet_t surf_utils::walk_mesh_and_make_manifold(const eh_t starter) {
     manifold.insert(neighbours.begin(), neighbours.end());
   }
   //. return the manifold
-  return manifold  
+  return manifold; 
 }
 
-moab::ErrorCode tag_elements_in_set(ehSet_t element_set, int tag_value) {
-  
+moab::ErrorCode surf_utils::tag_elements_in_set(const ehSet_t element_set, const int tag_value) {
+  moab::Tag new_tag;
+  // make a new tag
+  moab::ErrorCode rval = moab->tag_get_handle("MANIFOLD_ID", 1, moab::MB_TYPE_INTEGER, new_tag,
+                               moab::MB_TAG_SPARSE | moab::MB_TAG_CREAT);
+  ehVec_t entities(element_set.size());
+  std::copy(element_set.begin(), element_set.end(), entities.begin());
+  // moab tag the data with the value
+  std::vector<int> values(element_set.size(),tag_value);
+  rval = moab->tag_set_data(new_tag, &entities[0], entities.size(), values.data());  
+  assert(rval == moab::MB_SUCCESS);
+  return rval;
 }
 
 // walk the mesh of elements 

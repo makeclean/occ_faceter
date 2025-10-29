@@ -15,7 +15,7 @@ typedef std::vector<moab::EntityHandle> ehVec_t;
 class surf_utils {
   public:
    // constructor
-   surf_utils(std::shared_ptr<moab::Core> MBI);
+   surf_utils(std::shared_ptr<moab::Core> MBI, bool tagging = true);
    // destructor
    ~surf_utils();
    // walk the mesh and make n-manifolds
@@ -45,7 +45,10 @@ class surf_utils {
   // assuming a setup of input state that is required
   // go ahead and make a single manifold given a starter
   // element
-  void walk_mesh_and_make_manifolds(const eh_t starter);
+  ehSet_t walk_mesh_and_make_manifold(const eh_t starter);
+
+  moab::ErrorCode tag_elements_in_set(const ehSet_t element_set, const int tag_value);
+
 
   private:
   std::shared_ptr<moab::Core> moab; /// the MOAB core instance

@@ -109,6 +109,7 @@ ehSet_t surf_utils::walk_mesh_and_make_manifold(const eh_t starter) {
   return manifold; 
 }
 
+// tag all the elements in the element set with an integer tag_value 
 moab::ErrorCode surf_utils::tag_elements_in_set(const ehSet_t element_set, const int tag_value) {
   moab::Tag new_tag;
   // make a new tag
@@ -125,7 +126,9 @@ moab::ErrorCode surf_utils::tag_elements_in_set(const ehSet_t element_set, const
 
 // walk the mesh of elements 
 void surf_utils::walk_mesh_and_make_manifolds(const eh_t starter) {
+  	
   ehSet_t manifold = walk_mesh_and_make_manifold(starter);
+  entities_in_manifolds.insert(manfold.begin(), manifold.end());
   num_manifolds++;
   if (tag_data) tag_elements_in_set(manifold,num_manifolds);
 

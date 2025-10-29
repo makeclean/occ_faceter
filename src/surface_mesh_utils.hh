@@ -54,6 +54,8 @@ class surf_utils {
   std::shared_ptr<moab::Core> moab; /// the MOAB core instance
   bool tag_data; /// tag the moab set with various useful output data 
   int num_manifolds; /// the number of manifolds discovered
+  ehSet_t entities_in_manifolds; /// set of entities that 
+				 /// have been added to a manifold
 };
 
 #endif // SURF_UTILS_HH

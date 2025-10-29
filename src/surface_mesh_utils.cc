@@ -14,14 +14,21 @@ surf_utils::~surf_utils(){
 // volume surface sets and proceed to make 
 // n-manifolds by walking the connectivity
 void surf_utils::make_manifolds() {
-  moab::EntityHandle starter;
+  ehVec_t handles;
+  moab::ErrorCode rval = moab->get_entities_by_type(0,moab::MBTRI,handles);
+  eh_t starter = handles[0];
+  std::cout << handles.size() << std::endl;
   walk_mesh_and_make_manifolds(starter);
 }
 
 // get the neighbour elements to my own as a set
 ehSet_t surf_utils::get_element_neighbours(const eh_t element){
   std::vector<moab::EntityHandle> adjacent_elements;
-  moab::ErrorCode rval = moab->get_adjacencies(&element, 1, 2, true, adjacent_elements);
+  // adjacancies will need to get the 0 d neighbours, then poll the the 3 pairs in turn
+  // to build the adjacent elements
+  moab::ErrorCode rval = moab->get_adjacencies(&element, 1, 0, true, 
+		  adjacent_elements, moab::Interface::UNION);
+  std::cout << element << " " << adjacent_elements[0] << " " << adjacent_elements.size() << std::endl;
   std::set<moab::EntityHandle> adjacent_elements_set(adjacent_elements.begin(),
 						       adjacent_elements.end());
   return adjacent_elements_set;
@@ -64,7 +71,11 @@ void surf_utils::walk_mesh_and_make_manifolds(const eh_t starter) {
   int delta = 1;
   ehSet_t neighbours = get_element_neighbours(starter);
   manifold.insert(neighbours.begin(), neighbours.end());
-
+  std::cout << "size: " << manifold.size() << std::endl;
+  for ( eh_t element : manifold ) {
+    std::cout << element << " ";
+  }
+  std::cout << std::endl;
   // loop over the neighbours
   while (!neighbours.empty()) {
     neighbours = get_elements_neighbours(neighbours, manifold);
@@ -72,4 +83,5 @@ void surf_utils::walk_mesh_and_make_manifolds(const eh_t starter) {
   }
 
   //
+  std::cout << neighbours.size() << " " << manifold.size() << std::endl;
 }

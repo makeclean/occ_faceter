@@ -10,3 +10,10 @@ CONFIGURE_FILE(gluedCompSolid.brep . COPYONLY)
 CONFIGURE_FILE(gluedCompSolid_metadata.json . COPYONLY)
 ADD_TEST(NAME faceter_test COMMAND faceter_test)
 ENDIF(OCE_FOUND OR OCC_FOUND )
+
+# mesh utils test
+ADD_EXECUTABLE(surf_utils_test test_surf_utils.cc)
+TARGET_LINK_LIBRARIES(surf_utils_test surface_mesh_utils)
+CONFIGURE_FILE(test.h5m . COPYONLY)
+ADD_TEST(NAME surf_utils_test COMMAND surf_utils_test)
+

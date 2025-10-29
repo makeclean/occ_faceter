@@ -18,6 +18,7 @@ surf_utils::~surf_utils(){
 void surf_utils::make_manifolds() {
   ehVec_t handles;
   moab::ErrorCode rval = moab->get_entities_by_type(0,moab::MBTRI,handles);
+  assert(rval == moab::MB_SUCCESS);
   eh_t starter = handles[0];
   walk_mesh_and_make_manifolds(starter);
 }
@@ -27,6 +28,7 @@ eh_t surf_utils::get_neighbour_triangle_by_nodes(const eh_t node1, const eh_t no
   ehVec_t adjacent_elements;
   moab::ErrorCode rval = moab->get_adjacencies(&nodes[0], nodes.size(), 2, true, 
 		  adjacent_elements, moab::Interface::INTERSECT);
+  assert(rval == moab::MB_SUCCESS);
 
   // we should only have two shared by the triangle
   assert(adjacent_elements.size() == 2);
@@ -49,6 +51,7 @@ ehSet_t surf_utils::get_element_neighbours(const eh_t element){
   // get the nodes on the triangle
   moab::ErrorCode rval = moab->get_adjacencies(&element, 1, 0, true, 
 		  nodes, moab::Interface::UNION);
+  assert(rval == moab::MB_SUCCESS);
 
   // now using the three combinations of sides, get the adjacent element
   eh_t neighbour_triangle = get_neighbour_triangle_by_nodes(nodes[0],nodes[1],element);
@@ -115,6 +118,7 @@ moab::ErrorCode surf_utils::tag_elements_in_set(const ehSet_t element_set, const
   // make a new tag
   moab::ErrorCode rval = moab->tag_get_handle("MANIFOLD_ID", 1, moab::MB_TYPE_INTEGER, new_tag,
                                moab::MB_TAG_SPARSE | moab::MB_TAG_CREAT);
+  assert(rval == moab::MB_SUCCESS);
   ehVec_t entities(element_set.size());
   std::copy(element_set.begin(), element_set.end(), entities.begin());
   // moab tag the data with the value
@@ -124,12 +128,35 @@ moab::ErrorCode surf_utils::tag_elements_in_set(const ehSet_t element_set, const
   return rval;
 }
 
-// walk the mesh of elements 
+// walk the mesh of elements and make some manifolds
 void surf_utils::walk_mesh_and_make_manifolds(const eh_t starter) {
-  	
-  ehSet_t manifold = walk_mesh_and_make_manifold(starter);
-  entities_in_manifolds.insert(manfold.begin(), manifold.end());
-  num_manifolds++;
-  if (tag_data) tag_elements_in_set(manifold,num_manifolds);
+  // get all the triangles in the problem
+  ehVec_t handles;
+  moab::ErrorCode rval = moab->get_entities_by_type(0,moab::MBTRI,handles);
+  assert(rval == moab::MB_SUCCESS);
+ 
+  // get entitie as set 
+  ehSet_t handle_set(handles.begin(), handles.end());
 
+  // set of entities that are yet to be assigned
+  ehSet_t entities_unassigned = handle_set;
+
+  // whilst there are entities to assign
+  while (!entities_unassigned.empty()) {
+     eh_t element = *entities_unassigned.begin(); // pick arbitrary element
+     ehSet_t manifold = walk_mesh_and_make_manifold(element); // make a manifold
+     entities_in_manifolds.insert(manifold.begin(), manifold.end()); // insert into set
+	
+     ehSet_t result;
+     // remove entities in manfolds from entities_unassigned
+     std::set_difference(entities_unassigned.begin(), entities_unassigned.end(),
+                        manifold.begin(), manifold.end(),
+                        std::inserter(result, result.begin()));
+     entities_unassigned = result;
+
+     num_manifolds++; // increment counter
+     // might want to tag triangles with the set id
+     if (tag_data) tag_elements_in_set(manifold,num_manifolds);
+  }
+  std::cout << "summary: there are " << num_manifolds << " manifolds" << std::endl;
 }

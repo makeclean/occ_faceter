@@ -46,23 +46,8 @@ TEST_CASE("Test of surface utils two disperate manifolds", "[surf_utils]") {
 
   std::shared_ptr<moab::Core> mbi = std::make_shared<moab::Core>();
   // load triangles from file
-  moab::ErrorCode rval = mbi->load_file("test.h5m");
+  moab::ErrorCode rval = mbi->load_file("test_2.h5m");
   REQUIRE(rval == moab::MB_SUCCESS);
-
-  // scale all vertex coordinates by 10x and 
-  ehVec_t vertices;
-  rval = mbi->get_entities_by_type(0,moab::MBVERTEX,vertices);
-  REQUIRE(rval == moab::MB_SUCCESS);
-  std::vector<double> coords(3*vertices.size());
-  rval = mbi->get_coords(vertices.data(),vertices.size(),&coords[0]);
-  REQUIRE(rval == moab::MB_SUCCESS);
-  // scale the coords
-  double factor{10.0};
-  std::transform(coords.begin(), coords.end(), coords.begin(), [&factor](auto& c){return c*factor;});
-  rval = mbi->set_coords(&vertices[0],vertices.size(),coords.data());
-
-  // load in another set
-  rval = mbi->load_file("test.h5m");
 
   // make a surf_utils instance
   std::shared_ptr<surf_utils> meshUtils = std::make_shared<surf_utils>(mbi,true);

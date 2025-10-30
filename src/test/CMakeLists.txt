@@ -15,5 +15,6 @@ ENDIF(OCE_FOUND OR OCC_FOUND )
 ADD_EXECUTABLE(surf_utils_test test_surf_utils.cc)
 TARGET_LINK_LIBRARIES(surf_utils_test surface_mesh_utils)
 CONFIGURE_FILE(test.h5m . COPYONLY)
+CONFIGURE_FILE(test_2.h5m . COPYONLY)
 ADD_TEST(NAME surf_utils_test COMMAND surf_utils_test)
 

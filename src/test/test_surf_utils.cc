@@ -4,16 +4,14 @@
 #include "surface_mesh_utils.hh"
 
 TEST_CASE("Test of surface utils for making manifolds", "[surf_utils]") {
-
-  // pt_in_vol and ray_file tests
-
+  // make a MOAB instance
   std::shared_ptr<moab::Core> mbi = std::make_shared<moab::Core>();
   moab::ErrorCode rval = mbi->load_file("test.h5m");
   REQUIRE(rval == moab::MB_SUCCESS);
 
   // make a surf_utils instance
   std::shared_ptr<surf_utils> meshUtils = std::make_shared<surf_utils>(mbi,true);
-  // 
+  // make the manifolds
   meshUtils->make_manifolds();
 
   // number of elements tagged with manifold_id should equal
@@ -41,9 +39,7 @@ TEST_CASE("Test of surface utils for making manifolds", "[surf_utils]") {
 }
 
 TEST_CASE("Test of surface utils two disperate manifolds", "[surf_utils]") {
-
-  // pt_in_vol and ray_file tests
-
+  // make a MOAB instance 
   std::shared_ptr<moab::Core> mbi = std::make_shared<moab::Core>();
   // load triangles from file
   moab::ErrorCode rval = mbi->load_file("test_2.h5m");
